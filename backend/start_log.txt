@@ -1,0 +1,23 @@
+
+> backend@1.0.0 dev
+> nodemon index.ts
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: ts,json[39m
+[32m[nodemon] starting `ts-node index.ts`[39m
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜí∩╕Å secrets for agents: https://dotenvx.com/as2
+2026-03-20 19:12:02 [[32minfo[39m]: Server is running on port 5000
+2026-03-20 19:12:02 [[32minfo[39m]: Catalog API routes registered
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node index.ts`[39m
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+2026-03-21 01:30:34 [[32minfo[39m]: Server is running on port 5000
+2026-03-21 01:30:34 [[32minfo[39m]: Catalog API routes registered
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `ts-node index.ts`[39m
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  enable debug logging with { debug: true }
+2026-03-21 01:33:22 [[32minfo[39m]: Server is running on port 5000
+2026-03-21 01:33:22 [[32minfo[39m]: Catalog API routes registered

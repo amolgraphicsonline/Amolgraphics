@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --accent: #FF6A00;
+  --soft-grey: #F8F8F8;
+  --font-montserrat: var(--font-montserrat), "Montserrat", "Segoe UI", "Arial", sans-serif;
+  --font-comfortaa: var(--font-comfortaa), "Comfortaa", "Segoe UI", "Arial", cursive;
+}
+
+@theme inline {
+  --font-sans: var(--font-comfortaa);
+  --font-heading: var(--font-comfortaa);
+  --font-comfortaa: var(--font-comfortaa);
+  --font-montserrat: var(--font-montserrat);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-soft-grey: var(--soft-grey);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #020617;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-comfortaa);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+input, textarea, select, button {
+  font-family: inherit !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-comfortaa);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+@keyframes progress-full {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.animate-progress-full {
+  animation: progress-full linear forwards;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,503 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Brand {
+  id       String    @id
+  name     String
+  logo     String?
+  slug     String    @unique
+  products Product[]
+
+  @@map("brand")
+}
+
+model Addon {
+  id              String           @id
+  name            String
+  description     String?
+  price           Float
+  isActive        Boolean          @default(true)
+  orderItemAddons OrderItemAddOn[]
+
+  @@map("addon")
+}
+
+model AttributeOption {
+  id                  String            @id
+  categoryAttributeId String
+  value               String
+  displayValue        String?
+  image               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  isActive            Boolean           @default(true)
+  price               Float             @default(0)
+  thickness           String?
+  mounting            String?
+  categoryAttribute   CategoryAttribute @relation(fields: [categoryAttributeId], references: [id], onDelete: Cascade, map: "AttributeOption_categoryAttributeId_fkey")
+
+  @@unique([categoryAttributeId, value], map: "AttributeOption_categoryAttributeId_value_key")
+  @@map("attributeoption")
+}
+
+model BulkDiscount {
+  id            String  @id
+  productId     String
+  minQuantity   Int
+  discountType  String
+  discountValue Float
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade, map: "BulkDiscount_productId_fkey")
+
+  @@unique([productId, minQuantity], map: "BulkDiscount_productId_minQuantity_key")
+  @@map("bulkdiscount")
+}
+
+model Cart {
+  id        String     @id
+  userId    String?    @unique(map: "Cart_userId_key")
+  sessionId String?    @unique(map: "Cart_sessionId_key")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Cart_userId_fkey")
+  items     CartItem[]
+
+  @@map("cart")
+}
+
+model CartItem {
+  id                     String   @id
+  cartId                 String
+  productId              String
+  variantId              String?
+  designId               String?
+  quantity               Int      @default(1)
+  selectedVariantOptions String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  cart                   Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade, map: "CartItem_cartId_fkey")
+  design                 Design?  @relation(fields: [designId], references: [id], onDelete: Cascade, map: "CartItem_designId_fkey")
+  product                Product  @relation(fields: [productId], references: [id], onDelete: Cascade, map: "CartItem_productId_fkey")
+
+  @@index([cartId], map: "CartItem_cartId_fkey")
+  @@index([designId], map: "CartItem_designId_fkey")
+  @@index([productId], map: "CartItem_productId_fkey")
+  @@map("cartitem")
+}
+
+model Category {
+  id                 String              @id
+  name               String              @unique(map: "Category_name_key")
+  slug               String              @unique(map: "Category_slug_key")
+  description        String?             @db.Text
+  image              String?
+  parentId           String?
+  isActive           Boolean             @default(true)
+  order              Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tags               String?             @db.Text
+  parent             Category?           @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children           Category[]          @relation("CategoryHierarchy")
+  categoryAttributes CategoryAttribute[]
+  products           Product[]
+  banners            Banner[]
+
+  @@index([parentId], map: "category_parentId_fkey")
+  @@map("category")
+}
+
+model CategoryAttribute {
+  id               String            @id
+  categoryId       String
+  name             String
+  type             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
+  isActive         Boolean           @default(true)
+  attributeOptions AttributeOption[]
+  category         Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade, map: "CategoryAttribute_categoryId_fkey")
+
+  @@unique([categoryId, name], map: "CategoryAttribute_categoryId_name_key")
+  @@map("categoryattribute")
+}
+
+model Coupon {
+  id             String    @id
+  code           String    @unique(map: "Coupon_code_key")
+  discountType   String
+  discountValue  Float
+  minOrderAmount Float?
+  validUntil     DateTime?
+  usageLimit     Int?
+  usedCount      Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  orders         Order[]
+
+  @@map("coupon")
+}
+
+model Design {
+  id            String      @id
+  userId        String?
+  productId     String
+  originalImage String?
+  designJson    String      @db.LongText
+  previewImage  String
+  status        String      @default("ACTIVE")
+  createdAt     DateTime    @default(now())
+  cartItems     CartItem[]
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Design_productId_fkey")
+  user          User?       @relation(fields: [userId], references: [id], map: "Design_userId_fkey")
+  orderItems    OrderItem[]
+
+  @@index([productId], map: "Design_productId_fkey")
+  @@index([userId], map: "Design_userId_fkey")
+  @@map("design")
+}
+
+model Order {
+  id                String      @id
+  userId            String?
+  customerName      String
+  email             String
+  phone             String
+  address           String      @db.Text
+  subTotal          Float       @default(0)
+  discountAmount    Float       @default(0)
+  taxAmount         Float       @default(0)
+  shippingCost      Float       @default(0)
+  totalAmount       Float
+  couponId          String?
+  paymentStatus     String      @default("PENDING")
+  paymentMethod     String?
+  orderStatus       String      @default("PENDING")
+  courierName       String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  city              String?
+  deliveredAt       DateTime?
+  pincode           String?
+  razorpayOrderId   String?     @unique
+  razorpayPaymentId String?     @unique
+  razorpaySignature String?
+  shippedAt         DateTime?
+  state             String?
+  trackingId        String?
+  trackingUrl       String?
+  coupon            Coupon?     @relation(fields: [couponId], references: [id], map: "Order_couponId_fkey")
+  user              User?       @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
+  items             OrderItem[]
+  payments          Payment[]
+
+  @@index([couponId], map: "Order_couponId_fkey")
+  @@index([userId], map: "Order_userId_fkey")
+  @@map("order")
+}
+
+model Payment {
+  id                String   @id
+  orderId           String
+  amount            Float
+  currency          String   @default("INR")
+  status            String
+  provider          String
+  providerPaymentId String?
+  providerOrderId   String?
+  providerSignature String?
+  rawResponse       String?  @db.Text
+  createdAt         DateTime @default(now())
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId], map: "payment_orderId_fkey")
+  @@map("payment")
+}
+
+model OrderItem {
+  id                     String           @id
+  orderId                String
+  productId              String
+  designId               String
+  selectedVariantOptions String?          @db.Text
+  quantity               Int              @default(1)
+  price                  Float
+  variantId              String?
+  design                 Design           @relation(fields: [designId], references: [id], onDelete: Cascade, map: "OrderItem_designId_fkey")
+  order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "OrderItem_orderId_fkey")
+  product                Product          @relation(fields: [productId], references: [id], onDelete: Cascade, map: "OrderItem_productId_fkey")
+  addOns                 OrderItemAddOn[]
+
+  @@index([designId], map: "OrderItem_designId_fkey")
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+  @@index([productId], map: "OrderItem_productId_fkey")
+  @@map("orderitem")
+}
+
+model OrderItemAddOn {
+  id          String    @id
+  orderItemId String
+  addOnId     String
+  priceAtTime Float
+  addon       Addon     @relation(fields: [addOnId], references: [id], map: "OrderItemAddOn_addOnId_fkey")
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade, map: "OrderItemAddOn_orderItemId_fkey")
+
+  @@unique([orderItemId, addOnId], map: "OrderItemAddOn_orderItemId_addOnId_key")
+  @@index([addOnId], map: "OrderItemAddOn_addOnId_fkey")
+  @@map("orderitemaddon")
+}
+
+model Product {
+  id                String             @id
+  name              String
+  slug              String             @unique(map: "Product_slug_key")
+  description       String?            @db.Text
+  shortDescription  String?            @db.Text
+  productType       String             @default("SIMPLE")
+  status            String             @default("PUBLISHED")
+  mainImage         String?
+  images            String?            @db.LongText
+  categoryId        String
+  brandId           String?
+  regularPrice      Float?
+  salePrice         Float?
+  saleStartDate     DateTime?
+  saleEndDate       DateTime?
+  weight            Float?
+  length            Float?
+  width             Float?
+  height            Float?
+  trackInventory    Boolean            @default(false)
+  allowBackorders   Boolean            @default(false)
+  lowStockThreshold Int?               @default(5)
+  tags              String?            @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  buttonText        String?
+  crossSellIds      String?            @db.Text
+  enableReviews     Boolean            @default(true)
+  externalUrl       String?
+  isDownloadable    Boolean            @default(false)
+  isVirtual         Boolean            @default(false)
+  menuOrder         Int                @default(0)
+  purchaseNote      String?            @db.Text
+  soldIndividually  Boolean            @default(false)
+  upsellIds         String?            @db.Text
+  bulkDiscounts     BulkDiscount[]
+  cartItems         CartItem[]
+  designs           Design[]
+  orderItems        OrderItem[]
+  category          Category           @relation(fields: [categoryId], references: [id], map: "Product_categoryId_fkey")
+  brand             Brand?             @relation(fields: [brandId], references: [id])
+  attributes        ProductAttribute[]
+  templates         ProductTemplate[]
+  variants          ProductVariant[]
+  isReadyToSale     Boolean            @default(false)
+  minPhotos         Int?               @default(0)
+  maxPhotos         Int?               @default(0)
+
+  @@index([categoryId], map: "Product_categoryId_fkey")
+  @@index([brandId], map: "product_brandId_fkey")
+  @@map("product")
+}
+
+model ProductAttribute {
+  id        String                   @id
+  productId String
+  name      String
+  type      String                   @default("SELECT")
+  product   Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options   ProductAttributeOption[]
+
+  @@index([productId], map: "productattribute_productId_fkey")
+  @@map("productattribute")
+}
+
+model ProductAttributeOption {
+  id                 String           @id
+  productAttributeId String
+  value              String
+  displayValue       String?
+  attribute          ProductAttribute @relation(fields: [productAttributeId], references: [id], onDelete: Cascade)
+
+  @@index([productAttributeId], map: "productattributeoption_productAttributeId_fkey")
+  @@map("productattributeoption")
+}
+
+model ProductTemplate {
+  id        String  @id
+  productId String
+  name      String
+  image     String
+  config    String  @db.Text
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, map: "ProductTemplate_productId_fkey")
+
+  @@index([productId], map: "ProductTemplate_productId_fkey")
+  @@map("producttemplate")
+}
+
+model ProductVariant {
+  id                String             @id
+  productId         String
+  price             Float              @default(0)
+  salePrice         Float?
+  saleStartDate     DateTime?
+  saleEndDate       DateTime?
+  sku               String?            @unique(map: "ProductVariant_sku_key")
+  stock             Int                @default(0)
+  stockStatus       String             @default("IN_STOCK")
+  manageStock       Boolean            @default(true)
+  variantImage      String?
+  weight            Float?
+  length            Float?
+  width             Float?
+  height            Float?
+  isDefault         Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  isDownloadable    Boolean            @default(false)
+  isVirtual         Boolean            @default(false)
+  isActive          Boolean            @default(true)
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade, map: "ProductVariant_productId_fkey")
+  variantAttributes VariantAttribute[]
+
+  @@index([productId], map: "ProductVariant_productId_fkey")
+  @@map("productvariant")
+}
+
+model StoreSettings {
+  id                     String   @id
+  storeName              String   @default("AmolGraphics")
+  logo                   String?
+  subHeadline            String?  @default("THE STUDIO COLLECTIVE")
+  whatsappProvider       String   @default("TWILIO")
+  whatsappApiKey         String?
+  whatsappInstanceId     String?
+  whatsappFromNumber     String?
+  smsEnabled             Boolean  @default(false)
+  emailEnabled           Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
+  paymentSandboxMode     Boolean  @default(true)
+  razorpayKeyId          String?
+  razorpayKeySecret      String?
+  orderNotificationEmail String?
+  whatsappNumber         String?
+  facebookUrl            String?
+  instagramUrl           String?
+  contactAddress         String?  @db.Text
+  contactEmail           String?
+  contactPhone           String?
+  linkedinUrl            String?
+  youtubeUrl             String?
+  twitterUrl             String?
+  logoHeight             Int      @default(100)
+  showStoreNameInHeader  Boolean  @default(true)
+  storeNameFont          String   @default("Inter")
+  storeNameSize          Int      @default(24)
+  defaultShippingFee     Float    @default(0)
+  taxInclusive           Boolean  @default(true)
+  taxRate                Float    @default(18)
+  smtpHost               String?
+  smtpPass               String?
+  smtpPort               String?
+  smtpSecure             Boolean  @default(false)
+  smtpUser               String?
+  googleMapsApiKey       String?
+  googlePlaceId          String? @default("ChIJHdrz6TfBwj4R_YI85z_NIBY")
+
+  @@map("storesettings")
+}
+
+model User {
+  id        String   @id
+  email     String   @unique(map: "User_email_key")
+  password  String
+  name      String?
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cart      Cart?
+  designs   Design[]
+  orders    Order[]
+
+  @@map("user")
+}
+
+model VariantAttribute {
+  id             String         @id
+  variantId      String
+  attributeName  String
+  attributeValue String
+  productVariant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, map: "VariantAttribute_variantId_fkey")
+
+  @@unique([variantId, attributeName], map: "VariantAttribute_variantId_attributeName_key")
+  @@map("variantattribute")
+}
+
+model ProductDesign {
+  id              String   @id
+  name            String
+  description     String?  @db.Text
+  previewImage    String?
+  layoutJson      String?  @db.LongText
+  photoCount      Int      @default(1)
+  priceAdjustment Float    @default(0)
+  category        String   @default("acrylic")
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  shape           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("productdesign")
+}
+
+model HomeBanner {
+  id        String   @id @default(uuid())
+  image     String
+  title     String?  @db.Text
+  subtitle  String?  @db.Text
+  link      String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  height    String?
+  width     String?
+
+  @@map("homebanner")
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String   @db.Text
+  status    String   @default("UNREAD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contactmessage")
+}
+
+model Banner {
+  id          String    @id
+  title       String
+  subtitle    String?
+  imageUrl    String
+  categoryId  String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("banner")
+}

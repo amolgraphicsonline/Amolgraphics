@@ -1,0 +1,4 @@
+controllers/orderController.ts(76,13): error TS2353: Object literal may only specify known properties, and 'variantId' does not exist in type 'Without<OrderItemCreateInput, OrderItemUncheckedCreateInput> & OrderItemUncheckedCreateInput'.
+controllers/orderController.ts(217,9): error TS2353: Object literal may only specify known properties, and 'trackingUrl' does not exist in type '(Without<OrderUpdateInput, OrderUncheckedUpdateInput> & OrderUncheckedUpdateInput) | (Without<...> & OrderUpdateInput)'.
+scripts/check-design.ts(6,44): error TS2353: Object literal may only specify known properties, and 'mode' does not exist in type 'StringFilter<"ProductDesign">'.
+scripts/list-products.ts(7,37): error TS2353: Object literal may only specify known properties, and 'sku' does not exist in type 'ProductSelect<DefaultArgs>'.

@@ -1,0 +1,6 @@
+{"error":{"code":"BAD_REQUEST_ERROR","description":"Order amount less than minimum amount allowed","metadata":{},"reason":"NA","source":"order","step":"NA"},"level":"error","message":"Razorpay order creation failed:","statusCode":400,"timestamp":"2026-03-28 10:19:15"}
+{"level":"error","message":"Order creation failed","timestamp":"2026-03-28 10:19:15"}
+{"error":{"code":"BAD_REQUEST_ERROR","description":"Order amount less than minimum amount allowed","metadata":{},"reason":"NA","source":"order","step":"NA"},"level":"error","message":"Razorpay order creation failed:","statusCode":400,"timestamp":"2026-03-28 10:20:59"}
+{"level":"error","message":"Order creation failed","timestamp":"2026-03-28 10:20:59"}
+{"error":{"code":"BAD_REQUEST_ERROR","description":"Authentication failed"},"level":"error","message":"Razorpay order creation failed:","statusCode":401,"timestamp":"2026-03-28 18:34:16"}
+{"level":"error","message":"Order creation failed","timestamp":"2026-03-28 18:34:16"}

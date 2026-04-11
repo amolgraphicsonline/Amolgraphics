@@ -1,0 +1,40 @@
+
+Design should be in second stage-done
+Logo Required
+Payment gateway -APi for Razorpay
+SHiprocket API
+Transparent Images
+Session log out -
+
+1.Whatsapp  or Email the person  and do the Follow up who has left items in cart.
+2.While customize design, allow customer to write text (drop down  fonts and size ) and Icons (Show some icons,Images)
+3.Payment Gateway allow to do some testing for UPI and Credit card.
+4.Once successful payment and Order placed. Email and WhatsApp message should go to customer. and share link to customer for tracking items.
+5.Automatically session will be logged out more than 15 min if its inactive and no movement is identified
+
+
+
+Razor pay 
+
+4111 1111 1111 1111  Visa
+
+success@razorpay
+
+amolgraphicsonline@gmail.com
+Amolindia@2026
+
+Capcut
+Google flow
+chat.qwen.ai
+ww.imagine.ai
+genmo
+vidu
+wan ai
+vheer
+app.apob.ai
+
+
+apurv_sngh  Marketing Educator & sytem builder
+
+
+

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "cat_1774008452098",
+    "name": "Acrylic Photo",
+    "slug": "acrylic",
+    "isActive": true
+  },
+  {
+    "id": "cat_1774160181172",
+    "name": "Photo Album",
+    "slug": "photo-album",
+    "isActive": true
+  },
+  {
+    "id": "cat_1774160203101",
+    "name": "Photo Gallery",
+    "slug": "photo-gallery",
+    "isActive": true
+  },
+  {
+    "id": "cat_1774160230269",
+    "name": "Photo Lamp",
+    "slug": "photo-lamp",
+    "isActive": true
+  },
+  {
+    "id": "cat_1774160275397",
+    "name": "Polaroid Prints",
+    "slug": "polaroid-prints",
+    "isActive": true
+  },
+  {
+    "id": "cat_1774160304121",
+    "name": "Fridge Magnet",
+    "slug": "fridge-magnet",
+    "isActive": true
+  },
+  {
+    "id": "cat_1775052618206",
+    "name": "Canvas Frames",
+    "slug": "canvas-frames",
+    "isActive": true
+  },
+  {
+    "id": "cat_1775115497200",
+    "name": "Glossy Photo Frame",
+    "slug": "glossy-photo-frame",
+    "isActive": true
+  },
+  {
+    "id": "cat_1775115904516",
+    "name": "Matte Photo Frames",
+    "slug": "matte-photo-frames",
+    "isActive": true
+  },
+  {
+    "id": "cat_1775116373954",
+    "name": "Classic Photo Frames",
+    "slug": "classic-photo-frames",
+    "isActive": true
+  },
+  {
+    "id": "cat_1775116420477",
+    "name": "Door Name Plates",
+    "slug": "door-name-plates",
+    "isActive": true
+  },
+  {
+    "id": "cat_1775116702253",
+    "name": "Miniature Photo Stand",
+    "slug": "miniature-photo-stand",
+    "isActive": true
+  },
+  {
+    "id": "cat_anniv_1774344830369",
+    "name": "Anniversary Frames (archived-1774609447862)",
+    "slug": "anniversary-archived-1774609447862",
+    "isActive": false
+  },
+  {
+    "id": "cat_birth_1774344830392",
+    "name": "Birthday Frames (archived-1774609450411)",
+    "slug": "birthday-archived-1774609450411",
+    "isActive": false
+  },
+  {
+    "id": "d9ba49ea-d015-4045-8920-4779379c9906",
+    "name": "Acrylic Wall Clocks",
+    "slug": "clocks",
+    "isActive": true
+  }
+]

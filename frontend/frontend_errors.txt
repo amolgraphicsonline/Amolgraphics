@@ -1,0 +1,5 @@
+app/acrylic-photo/page.tsx(561,15): error TS2304: Cannot find name 'router'.
+app/admin/products/[id]/edit/page.tsx(205,80): error TS7006: Parameter 'v' implicitly has an 'any' type.
+app/admin/products/[id]/edit/page.tsx(212,41): error TS7006: Parameter 'v' implicitly has an 'any' type.
+app/admin/products/create/page.tsx(149,80): error TS7006: Parameter 'v' implicitly has an 'any' type.
+app/admin/products/create/page.tsx(156,41): error TS7006: Parameter 'v' implicitly has an 'any' type.
