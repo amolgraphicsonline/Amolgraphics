@@ -22,27 +22,27 @@ export default function PrintshoppyHeader({ settings, categories }: { settings: 
   return (
     <header className="w-full bg-white font-sans text-gray-800 relative z-50 shadow-sm border-b border-gray-100">
       {/* Top White Bar */}
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-3 md:py-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-10 flex flex-wrap items-center justify-between gap-8">
         
         {/* Left: Brand Name / Logo */}
         <div className="flex-shrink-0">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-4">
             {settings?.logo && (
                <img
                   src={resolveMedia(settings.logo, API_URL)}
                   alt={settings?.storeName || 'Store'}
-                  style={{ height: `${Math.min(settings?.logoHeight || 30, 45)}px` }}
+                  style={{ height: `${settings?.logoHeight || 60}px` }}
                   className="object-contain"
                />
             )}
-            <div className="flex flex-col items-start justify-center -space-y-1">
+            <div className="flex flex-col items-start justify-center -space-y-2">
                <span
                   style={{ fontFamily: "var(--font-comfortaa), Comfortaa, cursive" }}
-                  className="text-[24px] md:text-[30px] tracking-tight leading-none capitalize text-[#F25A24] antialiased"
+                  className="text-[36px] md:text-[52px] tracking-tighter leading-none capitalize text-[#F25A24] antialiased font-bold"
                >
                   {settings?.storeName?.split(' ')[0] || "Amol"}
                </span>
-               <span className="text-[8px] md:text-[10px] uppercase font-bold tracking-[0.25em] text-[#64748b] ml-1">
+               <span className="text-[12px] md:text-[14px] uppercase font-black tracking-[0.4em] text-[#64748b] ml-2">
                   {settings?.storeName?.split(' ').slice(1).join(' ') || "Graphics"}
                </span>
             </div>

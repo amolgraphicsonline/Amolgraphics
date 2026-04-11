@@ -105,18 +105,29 @@ export default function CartPage() {
                               </div>
                            </div>
 
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 border-t border-slate-50 pt-6">
-                              <div className="flex items-center gap-2">
-                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest min-w-[100px]">{item.name} Size:</span>
-                                 <span className="text-[11px] font-black text-slate-600 uppercase transition-all hover:text-[#1877F2]">{item.size || 'Default'}</span>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 border-t border-slate-50 pt-6">
+                              <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
+                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SIZE :</span>
+                                 <span className="text-[11px] font-black text-[#1877F2] uppercase">{item.size || 'Default'}</span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest min-w-[100px]">{item.name} Shape:</span>
-                                 <span className="text-[11px] font-black text-slate-600 uppercase">{designData.shape || 'Square'}</span>
+                              <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
+                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SHAPE :</span>
+                                 <span className="text-[11px] font-black text-[#1877F2] uppercase">{designData.shape || 'Square'}</span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest min-w-[100px]">{item.name} Border:</span>
-                                 <span className="text-[11px] font-black text-slate-600 uppercase">{designData.border || 'None'}</span>
+                              <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
+                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BORDER :</span>
+                                 <span className="text-[11px] font-black text-[#1877F2] uppercase">
+                                    {(() => {
+                                       const b = (designData.border || 'None').toUpperCase();
+                                       if (b === '#FFFFFF') return 'WHITE';
+                                       if (b === '#000000') return 'BLACK';
+                                       if (b === '#EF4444') return 'RED';
+                                       if (b === '#1877F2') return 'BLUE';
+                                       if (b === '#FFD700') return 'YELLOW';
+                                       if (b === '#1CAF9C') return 'GREEN';
+                                       return b;
+                                    })()}
+                                 </span>
                               </div>
                            </div>
                         </div>
@@ -184,10 +195,10 @@ export default function CartPage() {
                       <span className="text-slate-700">₹{Math.floor(total * 1.5)}</span>
                    </div>
                    {cart.map(item => (
-                     <div key={item.id} className="flex justify-between items-center text-[#1caf9c]">
-                        <span className="font-medium">{item.name} discount</span>
-                        <span>₹-{Math.floor(item.price * item.quantity * 0.5)}</span>
-                     </div>
+                       <div key={item.id} className="flex justify-between items-center text-[#1caf9c]">
+                         <span className="font-bold opacity-80 italic">Discount Applied</span>
+                         <span className="font-black tracking-tight">₹-{Math.floor(item.price * item.quantity * 0.5)}</span>
+                      </div>
                    ))}
                    <div className="flex justify-between items-center text-slate-500">
                       <span className="font-medium text-slate-400">Shipping Charges</span>
@@ -237,18 +248,16 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* GLOBAL SVG DEFINITIONS (Masks) */}
       <svg width="0" height="0" className="absolute pointer-events-none opacity-0">
         <defs>
           <clipPath id="heart-clip" clipPathUnits="objectBoundingBox">
-            <path d="M.5,1 C.5,1 0,.7 0,.3 C0,.1 .2,0 .4,0 C.5,0 .6,0 .7,.2 C.8,0 .9,0 1,0 C1.2,0 1.4,.1 1.4,.3 C1.4,.7 .9,1 .5,1 Z" 
-                  transform="scale(0.714, 1)" />
+            <path d="M 0.5 1 C 0.5 1 0 0.7 0 0.35 C 0 0.15 0.15 0 0.35 0 C 0.45 0 0.5 0.1 0.5 0.2 C 0.5 0.1 0.55 0 0.65 0 C 0.85 0 1 0.15 1 0.35 C 1 0.7 0.5 1 0.5 1" />
           </clipPath>
           <clipPath id="hexagon-clip" clipPathUnits="objectBoundingBox">
-            <path d="M0.5 0, 1 0.25, 1 0.75, 0.5 1, 0 0.75, 0 0.25 Z" />
+            <path d="M 0.25 0 L 0.75 0 L 1 0.5 L 0.75 1 L 0.25 1 L 0 0.5 Z" />
           </clipPath>
           <clipPath id="circle-clip" clipPathUnits="objectBoundingBox">
-             <circle cx="0.5" cy="0.5" r="0.5" />
+            <circle cx="0.5" cy="0.5" r="0.5" />
           </clipPath>
         </defs>
       </svg>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Search, Layout, Image as ImageIcon, Type, Shapes, CloudUpload, ChevronLeft, ChevronRight, ShoppingCart, ZoomIn, ZoomOut, Maximize2, Trash2, Check, Truck, RotateCcw, Facebook, Twitter, Instagram, Youtube, Phone, MessageSquare, Star, Printer, Layers, StickyNote, Percent, X, Square, Hexagon, Circle, Heart, RectangleVertical, RectangleHorizontal, Loader2, Move, MinusCircle, PlusCircle, Edit as LucideEdit, PenTool, Plus, LayoutGrid, ArrowRight } from "lucide-react";
+import { Search, Layout, Image as ImageIcon, Type, Shapes, CloudUpload, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, ZoomIn, ZoomOut, Maximize2, Trash2, Check, Truck, RotateCcw, Facebook, Twitter, Instagram, Youtube, Phone, MessageSquare, Star, Printer, Layers, StickyNote, Percent, X, Square, Hexagon, Circle, Heart, RectangleVertical, RectangleHorizontal, Loader2, Move, MinusCircle, PlusCircle, Edit as LucideEdit, Edit3, Copy, PenTool, Plus, LayoutGrid, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
@@ -30,7 +30,7 @@ export default function StudioV2Page() {
   const designIdParam = searchParams.get('designId');
   const shapeParam = searchParams.get('shape') || "";
   const frameCountParam = searchParams.get('frameCount');
-   const { addToCart, cart } = useCart();
+  const { addToCart, cart } = useCart();
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
   const [designs, setDesigns] = useState<DesignOption[]>([]);
@@ -67,7 +67,7 @@ export default function StudioV2Page() {
   const [workingPhoto, setWorkingPhoto] = useState<PhotoState | null>(null);
   const [showUnsavedPrompt, setShowUnsavedPrompt] = useState<boolean>(false);
   const [activeGalleryOverlay, setActiveGalleryOverlay] = useState<'size' | 'shape' | 'border' | null>(null);
-  const [selectedBorderColor, setSelectedBorderColor] = useState<string>('none');
+  const [borderColor, setBorderColor] = useState<string>('none');
   const [personalizationStage, setPersonalizationStage] = useState<'upload' | 'configure'>('upload');
 
   // Sync state with URL manually for fast back-button support
@@ -117,7 +117,8 @@ export default function StudioV2Page() {
           setDynamicShapes([
             { id: 'landscape', label: 'Horizontal Landscape', image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=400' },
             { id: 'portrait', label: 'Vertical Portrait', image: 'https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&q=80&w=400' },
-            { id: 'square', label: 'Classic Square', image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=400' }
+            { id: 'square', label: 'Classic Square', image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=400' },
+            { id: 'hexagone', label: 'Hexagone', image: 'https://images.unsplash.com/photo-1583945321524-70498a54ede8?auto=format&fit=crop&q=80&w=400' }
           ]);
         }
       });
@@ -153,7 +154,7 @@ export default function StudioV2Page() {
     if (!activeProductData) return;
     const product = activeProductData;
     const allVariants = product.variants || product.product_variants || [];
-    
+
     if (product.productType === "VARIABLE" && allVariants.length > 0) {
       const seenSizes = new Set<string>();
       const variantSizes: any[] = [];
@@ -187,7 +188,7 @@ export default function StudioV2Page() {
           const n = (a.attributeName || a.name || "").toLowerCase();
           return n.includes("size") || n.includes("dimension") || n.includes("measure");
         });
-        
+
         if (sizeAttr) {
           const sVal = sizeAttr.attributeValue || sizeAttr.value || "";
           if (!seenSizes.has(sVal)) {
@@ -195,7 +196,7 @@ export default function StudioV2Page() {
             if (dimMatch) {
               const w = parseInt(dimMatch[1]);
               const h = parseInt(dimMatch[2]);
-              
+
               const target = (selectedShape || 'Portrait').toLowerCase();
               let isValid = true;
               if (target === 'portrait' && w > h) isValid = false;
@@ -228,7 +229,7 @@ export default function StudioV2Page() {
   // CATEGORY FALLBACK EFFECT: Only runs if sizeOptions is empty and we have a category
   useEffect(() => {
     if (sizeOptions.length > 0 || !categoryParam || !categories.length) return;
-    
+
     const activeCat = categories.find(c => c.slug === categoryParam);
     if (activeCat?.categoryAttributes) {
       const catSizeAttr = activeCat.categoryAttributes.find((a: any) => a.name.toLowerCase().includes("size"));
@@ -243,21 +244,20 @@ export default function StudioV2Page() {
           const target = (selectedShape || 'Portrait').toLowerCase();
           if (target === 'portrait') return h >= w;
           if (target === 'landscape') return w >= h;
-          if (target === 'square') return Math.abs(w-h) < 2;
+          if (target === 'square') return Math.abs(w - h) < 2;
           return true;
         }).map((v: any, idx: number) => {
           const valStr = typeof v === 'string' ? v : (v.value || v.displayValue || "");
           const dimMatch = valStr.match(/(\d+)\s*[xX*]\s*(\d+)/);
           return {
-            id: `psize-fallback-${idx}`, label: valStr, 
+            id: `psize-fallback-${idx}`, label: valStr,
             width: dimMatch ? parseInt(dimMatch[1]) : 12, height: dimMatch ? parseInt(dimMatch[2]) : 12, price: 0,
             thickness: '3 MM', mounting: 'Adhesive Tape (Included)'
           };
         });
         setSizeOptions(parsed);
-        // FOR GALLERY: We don't auto-select to ensure user picks their preferred size (per validation request)
-        if (!selectedSize && !categoryParam.includes('gallery')) {
-           setSelectedSize(parsed[0]);
+        if (!selectedSize) {
+          setSelectedSize(parsed[0]);
         }
       }
     }
@@ -389,11 +389,11 @@ export default function StudioV2Page() {
       finally { setIsUploading(false); }
     }
     if (!url) return;
-    setUploadedPhotos(prev => ({ 
-      ...prev, 
-      [idx]: { 
-        url, scale: init?.scale || 0.8, x: init?.x || 0, y: init?.y || 0, rotate: init?.rotate || 0, ...init 
-      } 
+    setUploadedPhotos(prev => ({
+      ...prev,
+      [idx]: {
+        url, scale: init?.scale || 0.8, x: init?.x || 0, y: init?.y || 0, rotate: init?.rotate || 0, ...init
+      }
     }));
   };
 
@@ -440,9 +440,9 @@ export default function StudioV2Page() {
   const handleAddToCart = async () => {
     if (isCapturing) return;
     if (!selectedSize) {
-       setActiveGalleryOverlay('size');
-       alert("Please select a final Frame Size before adding to cart.");
-       return;
+      setActiveGalleryOverlay('size');
+      alert("Please select a final Frame Size before adding to cart.");
+      return;
     }
     if (!selectedShape) return alert("Please select a shape.");
     if (photoStats.uploaded < photoStats.required) return alert(`Please upload at least ${photoStats.required} photo(s).`);
@@ -468,7 +468,7 @@ export default function StudioV2Page() {
       photos: uploadedPhotos,
       frameCount: totalFrames,
       shape: selectedShape,
-      border: selectedBorderColor,
+      border: borderColor,
       size: selectedSize
     };
 
@@ -535,7 +535,7 @@ export default function StudioV2Page() {
 
           {/* 1. HERO BANNER CONTAINER */}
           <CategoryBanner
-            categoryId={categories.find(c => c.slug === categoryParam || c.name === categoryParam)?.id}
+            categoryId={categories.find(c => c.slug === categoryParam || c.name === categoryParam || (categoryParam.includes('gallery') && c.slug.includes('gallery')))?.id}
             showButton={false}
           />
 
@@ -611,15 +611,15 @@ export default function StudioV2Page() {
                 <div className="relative mb-12">
                   <div id="shape-scroll-container-gal" className="flex overflow-x-auto no-scrollbar gap-6 md:gap-8 py-8 px-4 scroll-smooth">
                     {dynamicShapes.map(s => (
-                      <button key={s.id} onClick={() => pushQuery(s.id)} className="group flex flex-col items-center shrink-0 w-[140px] md:w-[170px]">
-                        <div className="w-full aspect-[3/4] bg-white rounded-3xl overflow-hidden mb-3 shadow-2xl shadow-slate-200/50 transition-all relative border-[4px] border-white group-hover:border-[#1877F2] group-hover:scale-105">
+                      <button key={s.id} onClick={() => pushQuery(s.id)} className="group flex flex-col items-center shrink-0 w-[200px] md:w-[260px]">
+                        <div className="w-full aspect-square bg-white rounded-[32px] overflow-hidden mb-5 shadow-2xl shadow-slate-200/50 transition-all relative border-[8px] border-white group-hover:border-[#1877F2] group-hover:scale-105 group-hover:rotate-1">
                           {s.image ? (
                             <img src={resolveMedia(s.image, API_URL)} className="w-full h-full object-cover transition-transform duration-700" alt={s.label} />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50"><Shapes size={50} className="group-hover:text-[#1877F2] transition-colors" /></div>
+                            <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50"><Shapes size={60} className="group-hover:text-[#1877F2] transition-colors" /></div>
                           )}
                         </div>
-                        <h4 className="text-base font-bold text-slate-900 capitalize tracking-tight group-hover:text-[#1877F2] transition-colors">{s.label}</h4>
+                        <h4 className="text-xl font-black text-slate-900 capitalize tracking-tighter group-hover:text-[#1877F2] transition-colors">{s.label}</h4>
                       </button>
                     ))}
                   </div>
@@ -692,8 +692,107 @@ export default function StudioV2Page() {
             </React.Fragment>
           )}
 
+          {/* 1.5 FRIDGE MAGNET SPECIFIC LANDING PAGE */}
+          {categoryParam.includes('magnet') && (
+            <div className="max-w-[1400px] mx-auto mb-20 px-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start mb-20">
+                {/* Left: Product Feature Image */}
+                <div className="space-y-4">
+                  <div className="aspect-square bg-white rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200/50 border-[12px] border-white group">
+                    <img
+                      src="https://images.unsplash.com/photo-1590483734724-38fa197a1980?auto=format&fit=crop&q=80&w=1200"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                      alt="Acrylic Fridge Magnet"
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Pricing & Quick Start */}
+                <div className="space-y-8 pt-4">
+                  <div className="space-y-2">
+                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase italic">
+                      ACRYLIC FRIDGE <span className="text-[#1877F2]">MAGNETS</span>
+                    </h1>
+                    <div className="h-1.5 w-24 bg-[#1877F2] rounded-full" />
+                  </div>
+
+                  <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm space-y-8">
+                    {/* Pricing Tiers */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex flex-col items-center text-center">
+                        <span className="text-xl font-black text-slate-900">₹ 149/-</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Each</span>
+                      </div>
+                      <div className="bg-blue-50 p-5 rounded-3xl border-2 border-[#1877F2]/20 flex flex-col items-center text-center relative">
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#1877F2] text-white text-[7px] font-black px-3 py-0.5 rounded-full uppercase">Value</div>
+                        <span className="text-xl font-black text-[#1877F2]">₹ 129/-</span>
+                        <span className="text-[10px] font-bold text-[#1877F2] uppercase tracking-widest mt-1">5+ Qty</span>
+                      </div>
+                      <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex flex-col items-center text-center">
+                        <span className="text-xl font-black text-slate-900">₹ 119/-</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">10+ Qty</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Start Card */}
+                    <div className="border-[3px] border-[#1877F2]/10 rounded-[2rem] p-6 bg-slate-50/50 space-y-5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Select Shape & Style</span>
+                        <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-tighter">Premium Acrylic</span>
+                      </div>
+                      <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-inner flex flex-col md:flex-row items-center gap-6">
+                        <div className="flex-1 w-full">
+                          <button onClick={() => pushQuery('Square', null, 1)} className="w-full h-14 bg-[#1877F2] hover:bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
+                            <CloudUpload size={20} strokeWidth={3} /> Upload Photos
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Badges Section */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="p-3 bg-white rounded-xl shadow-sm"><Zap className="text-amber-500" size={24} /></div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-wide">Strong Magnet</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Industrial Grade</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="p-3 bg-white rounded-xl shadow-sm"><ShieldCheck className="text-emerald-500" size={24} /></div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-wide">3MM Acrylic</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Scratch Resistant</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* High Density Feature Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+                <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm space-y-6 flex flex-col items-center text-center group hover:border-[#1877F2]/30 transition-all">
+                  <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center text-[#1877F2] group-hover:scale-110 transition-transform"><Printer size={40} /></div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic">Crystal Print</h3>
+                  <p className="text-sm font-medium text-slate-500 leading-relaxed">High-definition pigment printing that brings your memories to life with incredible vibrance and detail.</p>
+                </div>
+                <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm space-y-6 flex flex-col items-center text-center group hover:border-[#1877F2]/30 transition-all">
+                  <div className="w-20 h-20 bg-orange-50 rounded-[2rem] flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform"><Zap size={40} strokeWidth={2.5} /></div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic">Strong Grip</h3>
+                  <p className="text-sm font-medium text-slate-500 leading-relaxed">Integrated industrial-strength magnets ensure your photos stay securely on any magnetic surface.</p>
+                </div>
+                <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm space-y-6 flex flex-col items-center text-center group hover:border-[#1877F2]/30 transition-all">
+                  <div className="w-20 h-20 bg-emerald-50 rounded-[2rem] flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform"><ShieldCheck size={40} /></div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic">Ultra Durable</h3>
+                  <p className="text-sm font-medium text-slate-500 leading-relaxed">3MM thickness provides excellent rigidity while remaining lightweight and resistant to scratches.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 2. MAIN CATEGORY SECTION - For Non-Gallery Items */}
-          {!categoryParam.includes('gallery') && (
+          {!categoryParam.includes('gallery') && !categoryParam.includes('magnet') && (
             <div className="max-w-[1300px] mx-auto mb-20 px-4">
               <div className="text-center mb-10">
                 <h2 className="text-xl md:text-4xl font-black text-slate-900 tracking-tight mb-2 uppercase italic">
@@ -722,8 +821,8 @@ export default function StudioV2Page() {
             </div>
           )}
 
-          {/* 4. UPSELL SECTION: PHOTO GALLERY SET - Hidden on Gallery Page */}
-          {!categoryParam.includes('gallery') && (
+          {/* 4. UPSELL SECTION: PHOTO GALLERY SET - Hidden on Gallery & Magnet Page */}
+          {!categoryParam.includes('gallery') && !categoryParam.includes('magnet') && (
             <div className="max-w-[1240px] mx-auto mb-6">
               <div className="bg-[#F8F9FA] rounded-2xl p-6 border border-slate-100 shadow-sm">
                 <div className="mb-6">
@@ -1109,7 +1208,7 @@ export default function StudioV2Page() {
                     <div className="flex items-end justify-center gap-1 relative" style={{ perspective: '800px' }}>
                       {[
                         { name: 'Square', rotate: -25, translateY: -8, borderRadius: '4px', w: 'w-14 md:w-16', h: 'h-14 md:h-16', img: '/shapes/square.png' },
-                        { name: 'Hexagon', rotate: -15, translateY: -16, borderRadius: '4px', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', w: 'w-14 md:w-16', h: 'h-14 md:h-16', img: '/shapes/hexagon.png' },
+                        { name: 'Hexagone', rotate: -15, translateY: -16, borderRadius: '4px', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', w: 'w-14 md:w-16', h: 'h-14 md:h-16', img: '/shapes/hexagon.png' },
                         { name: 'Circle', rotate: -5, translateY: -20, borderRadius: '50%', w: 'w-14 md:w-16', h: 'h-14 md:h-16', img: '/shapes/circle.png' },
                         { name: 'Heart', rotate: 5, translateY: -16, borderRadius: '0', clipPath: 'polygon(50% 15%, 60% 0%, 80% 0%, 100% 15%, 100% 40%, 50% 100%, 0% 40%, 0% 15%, 20% 0%, 40% 0%)', w: 'w-14 md:w-16', h: 'h-14 md:h-16', img: '/shapes/heart.png' },
                         { name: 'Portrait', rotate: 15, translateY: -8, borderRadius: '4px', w: 'w-11 md:w-12', h: 'h-16 md:h-20', img: '/shapes/portrait.png' },
@@ -1148,7 +1247,7 @@ export default function StudioV2Page() {
                   <div className="p-5 md:p-8 bg-[#EAF5FF] flex flex-col justify-center h-full">
                     <h3 className="text-lg md:text-xl font-black text-[#1877F2] mb-2 leading-tight tracking-tight">Shapes As Unique As Your Memories</h3>
                     <p className="text-slate-500 font-medium text-xs leading-relaxed">
-                      Shape your memories in 6 unique ways ranging from square to hexagon, you have the power to frame your memories in the perfect form. Each shape is precision-cut to perfection.
+                      Shape your memories in 6 unique ways ranging from square to hexagone, you have the power to frame your memories in the perfect form. Each shape is precision-cut to perfection.
                     </p>
                   </div>
                 </div>
@@ -1511,7 +1610,7 @@ export default function StudioV2Page() {
 
   // VIEW 4: GALLERY MULTI-FRAME EDITOR (PrintShoppy Style)
   const isGallerySet = categoryParam.includes('gallery') && shapeParam && designIdParam;
-  
+
   if (isGallerySet && singleEditIndex === null) {
     const totalFrames = parseInt(frameCountParam || "1");
     const totalPrice = (displayPrice * totalFrames).toFixed(0);
@@ -1528,17 +1627,17 @@ export default function StudioV2Page() {
       <div className="bg-[#f2f2f2] min-h-screen flex flex-col overflow-hidden font-sans">
         {/* Global SVG Clip Definitions — Essential at root for immediate browser mask application */}
         <svg width="0" height="0" className="absolute pointer-events-none" aria-hidden="true">
-           <defs>
-              <clipPath id="heart-clip" clipPathUnits="objectBoundingBox">
-                 <path d="M0.5,1 C0.5,1 0,0.7 0,0.35 C0,0.1 0.2,0 0.5,0.2 C0.8,0 1,0.1 1,0.35 C1,.7 .5,1 .5,1 Z" />
-              </clipPath>
-              <clipPath id="hexagon-clip" clipPathUnits="objectBoundingBox">
-                 <path d="M 0.25 0 L 0.75 0 L 1 0.5 L 0.75 1 L 0.25 1 L 0 0.5 Z" />
-              </clipPath>
-              <clipPath id="circle-clip" clipPathUnits="objectBoundingBox">
-                <circle cx="0.5" cy="0.5" r="0.5" />
-              </clipPath>
-           </defs>
+          <defs>
+            <clipPath id="heart-clip" clipPathUnits="objectBoundingBox">
+              <path d="M0.5,1 C0.5,1 0,0.7 0,0.35 C0,0.1 0.2,0 0.5,0.2 C0.8,0 1,0.1 1,0.35 C1,.7 .5,1 .5,1 Z" />
+            </clipPath>
+            <clipPath id="hexagon-clip" clipPathUnits="objectBoundingBox">
+              <path d="M 0.25 0 L 0.75 0 L 1 0.5 L 0.75 1 L 0.25 1 L 0 0.5 Z" />
+            </clipPath>
+            <clipPath id="circle-clip" clipPathUnits="objectBoundingBox">
+              <circle cx="0.5" cy="0.5" r="0.5" />
+            </clipPath>
+          </defs>
         </svg>
         {/* Top Navbar */}
         <header className="px-6 py-4 flex items-center justify-between border-b border-gray-100 bg-white shadow-sm z-[100]">
@@ -1580,14 +1679,14 @@ export default function StudioV2Page() {
 
         {/* Gallery Title/Category */}
         <div className="text-center pt-8 pb-2">
-           <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
-              Acrylic Photo Print
-           </h1>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1 space-x-2">
-              <span>● Professional Grade</span>
-              <span>● Ultra-Smooth Finish</span>
-              <span>● Life-long Gloss</span>
-           </p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
+            Acrylic Photo Print
+          </h1>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1 space-x-2">
+            <span>● Professional Grade</span>
+            <span>● Ultra-Smooth Finish</span>
+            <span>● Life-long Gloss</span>
+          </p>
         </div>
 
         {/* Selected Config Bar */}
@@ -1595,9 +1694,8 @@ export default function StudioV2Page() {
           <span className="text-[10px] font-black text-slate-400 uppercase pt-2 mr-2">SELECTED :</span>
           <span className="bg-[#d6ebfa] text-[#1877F2] text-[11px] font-black px-4 py-2 rounded-xl uppercase">{selectedSize?.label || '6x6"'}</span>
           <span className="bg-[#d6ebfa] text-[#1877F2] text-[11px] font-black px-4 py-2 rounded-xl uppercase">{selectedShape}</span>
-          <span className="bg-[#d6ebfa] text-[#1877F2] text-[11px] font-black px-4 py-2 rounded-xl uppercase">{selectedBorderColor === 'none' ? 'No Border' : 'Border Active'}</span>
+          <span className="bg-[#d6ebfa] text-[#1877F2] text-[11px] font-black px-4 py-2 rounded-xl uppercase">{borderColor === 'none' ? 'No Border' : 'Border Active'}</span>
         </div>
-
         {/* Main Frames List */}
         <main className="flex-1 overflow-x-auto no-scrollbar scroll-smooth pb-64">
           <div className="flex gap-8 px-8 min-w-max h-full items-start pt-8">
@@ -1605,53 +1703,58 @@ export default function StudioV2Page() {
               const photo = uploadedPhotos[i];
               return (
                 <div key={i} className="flex flex-col items-center">
-                  <div className="w-[300px] md:w-[340px] bg-slate-100 rounded-[32px] shadow-[0_15px_45px_rgba(0,0,0,0.06)] border border-gray-200/50 p-6 flex flex-col relative transition-all duration-500 hover:shadow-[0_40px_100px_rgba(0,0,0,0.12)] hover:bg-slate-50">
+                  <div 
+                    className="w-[300px] md:w-[340px] bg-[#F3F4F6] rounded-[32px] shadow-[0_15px_45px_rgba(0,0,0,0.06)] p-8 flex flex-col relative transition-all duration-500 hover:shadow-[0_40px_100px_rgba(0,0,0,0.12)]" 
+                  >
                     {/* Dimension markers */}
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-3 w-[70%] text-slate-300">
-                      <ChevronLeft size={14} className="opacity-50" />
-                      <div className="h-[2px] flex-1 bg-slate-200" />
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter whitespace-nowrap">{sizeW} inch</span>
-                      <div className="h-[2px] flex-1 bg-slate-200" />
-                      <ChevronRight size={14} className="opacity-50" />
-                    </div>
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 h-[60%] text-slate-300">
-                      <ChevronRight size={14} className="opacity-50 -rotate-90" />
-                      <div className="w-[2px] flex-1 bg-slate-200" />
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter whitespace-nowrap rotate-90 my-6">{sizeH} inch</span>
-                      <div className="w-[2px] flex-1 bg-slate-200" />
-                      <ChevronLeft size={14} className="opacity-50 -rotate-90" />
+                    <div className="absolute top-10 left-1/2 -translate-x-1/2 flex items-center justify-between w-[65%] text-slate-800 font-bold text-[13px]">
+                       <ChevronLeft size={16} />
+                       <span className="whitespace-nowrap uppercase tracking-widest">{selectedSize?.label.split('x')[0] || '6'} INCH</span>
+                       <ChevronRight size={16} />
                     </div>
 
+                    <div className="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-[50%] text-slate-800 font-bold text-[13px]">
+                       <ChevronUp size={16} />
+                       <span className="rotate-90 whitespace-nowrap uppercase tracking-widest">{selectedSize?.label.split('x')[1] || '6'} INCH</span>
+                       <ChevronDown size={16} />
+                    </div>
+
+                    {/* Trash Button */}
                     <button 
-                      onClick={() => handleDeleteFrame(i)}
-                      className="absolute top-6 right-8 text-rose-300 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-2xl transition-all border border-transparent hover:border-rose-100 shadow-sm"
+                      onClick={() => {
+                        const newPhotos = { ...uploadedPhotos };
+                        delete newPhotos[i];
+                        setUploadedPhotos(newPhotos);
+                        if (totalFrames > 1) pushQuery(selectedShape, designIdParam, totalFrames - 1);
+                      }}
+                      className="absolute top-6 right-6 w-10 h-10 bg-white shadow-lg rounded-full flex items-center justify-center text-rose-500 hover:scale-110 active:scale-95 transition-all z-20 border border-slate-100"
                     >
-                      <Trash2 size={18} strokeWidth={2.5} />
+                      <Trash2 size={20} strokeWidth={2.5} />
                     </button>
-
-                    <div className="relative mt-4 group/photo aspect-square" style={{
+                    
+                    {/* Main Shape Container */}
+                    <div className="relative mt-8 aspect-square flex items-center justify-center" style={{
+                      backgroundColor: borderColor && borderColor !== 'none' ? borderColor : 'transparent',
                       borderRadius: selectedShape.toLowerCase().includes('block') || selectedShape.toLowerCase().includes('square') ? '12px' : (selectedShape.toLowerCase().includes('circle') ? '50%' : '0'),
                       clipPath: selectedShape.toLowerCase().includes('heart') ? 'url(#heart-clip)' : (selectedShape.toLowerCase().includes('hex') ? 'url(#hexagon-clip)' : (selectedShape.toLowerCase().includes('circle') ? 'url(#circle-clip)' : 'none')),
-                      filter: 'drop-shadow(0 25px 50px rgba(0,0,0,0.18))'
+                      filter: 'drop-shadow(0 25px 45px rgba(0,0,0,0.15))'
                     }}>
-                      <div className="absolute inset-0 bg-white" />
-                      <div className="absolute inset-0 overflow-hidden" style={{
-                         borderRadius: (selectedShape.toLowerCase().includes('heart') || selectedShape.toLowerCase().includes('hex') || selectedShape.toLowerCase().includes('circle')) ? '0' : '12px',
+                      <div className="w-[94%] h-[94%] bg-white relative overflow-hidden" style={{
+                         borderRadius: (selectedShape.toLowerCase().includes('heart') || selectedShape.toLowerCase().includes('hex') || selectedShape.toLowerCase().includes('circle')) ? '0' : '8px',
+                         clipPath: selectedShape.toLowerCase().includes('heart') ? 'url(#heart-clip)' : (selectedShape.toLowerCase().includes('hex') ? 'url(#hexagon-clip)' : (selectedShape.toLowerCase().includes('circle') ? 'url(#circle-clip)' : 'none')),
                       }}>
                         {photo ? (
                           <div className="w-full h-full relative group">
-                             {/* INTERACTIVE LAYER - PASS onAdjust to enable dragging on same screen */}
                              <DesignCanvas
-                               design={selectedDesign}
-                               shape={selectedShape}
-                               photos={{0: photo}}
-                               onAdjust={(idx: number, state: any) => {
-                                  setUploadedPhotos(prev => ({ ...prev, [i]: { ...state } }));
-                               }}
-                               isFinal={false}
-                               apiUrl={API_URL}
+                                design={selectedDesign}
+                                shape={selectedShape}
+                                photos={{0: photo}}
+                                onAdjust={(idx: number, state: any) => {
+                                   setUploadedPhotos(prev => ({ ...prev, [i]: { ...state } }));
+                                }}
+                                isFinal={false}
+                                apiUrl={API_URL}
                              />
-                             {/* Small hand hint overlay */}
                              <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                                 <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20">
                                    <Move size={12} className="text-white" />
@@ -1660,17 +1763,16 @@ export default function StudioV2Page() {
                              </div>
                           </div>
                         ) : (
-                          <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center text-slate-200 gap-2 border-2 border-dashed border-slate-100">
-                             <ImageIcon size={32} strokeWidth={1} />
-                             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">No Photo</span>
+                          <div className="w-full h-full bg-white flex flex-col items-center justify-center text-slate-200">
+                             <ImageIcon size={48} strokeWidth={1} className="opacity-10" />
                           </div>
                         )}
                       </div>
                       {!photo && (
                          <div className="absolute inset-0 flex items-center justify-center">
-                            <label className="bg-[#1877F2] text-white w-12 h-12 rounded-full flex items-center justify-center shadow-xl cursor-pointer hover:scale-110 active:scale-95 transition-all">
+                            <label className="bg-[#1877F2] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-110 active:scale-95 transition-all">
                                <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handlePhotoUpload(i, e.target.files[0])} />
-                               <Plus size={24} />
+                               <Plus size={28} strokeWidth={3} />
                             </label>
                          </div>
                       )}
@@ -1678,49 +1780,55 @@ export default function StudioV2Page() {
 
                     {/* Compact Zoom Slider */}
                     {photo && (
-                       <div className="mt-4 flex flex-col items-center">
-                          <div className="bg-white/95 backdrop-blur-sm border border-slate-100 shadow-sm rounded-full px-4 py-1.5 flex items-center gap-3 w-[180px]">
-                             <button 
-                                onClick={() => setUploadedPhotos(prev => ({ ...prev, [i]: { ...prev[i], scale: Math.max(0.5, (prev[i]?.scale || 1) - 0.1) } }))}
-                                className="text-slate-300 hover:text-blue-500"
-                             >
-                                <MinusCircle size={14} />
-                             </button>
-                             <input 
-                                type="range" 
-                                min="0.5" 
-                                max="2" 
-                                step="0.01" 
-                                value={photo.scale || 1}
-                                onChange={(e) => setUploadedPhotos(prev => ({ ...prev, [i]: { ...prev[i], scale: parseFloat(e.target.value) } }))}
-                                className="flex-1 accent-[#1877F2] h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                             />
-                             <button 
-                                onClick={() => setUploadedPhotos(prev => ({ ...prev, [i]: { ...prev[i], scale: Math.min(2, (prev[i]?.scale || 1) + 0.1) } }))}
-                                className="text-slate-300 hover:text-blue-500"
-                             >
-                                <PlusCircle size={14} />
-                             </button>
-                          </div>
-                       </div>
+                      <div className="mt-4 flex flex-col items-center">
+                        <div className="bg-white/95 backdrop-blur-sm border border-slate-100 shadow-sm rounded-full px-4 py-1.5 flex items-center gap-3 w-[180px]">
+                          <button
+                            onClick={() => setUploadedPhotos(prev => ({ ...prev, [i]: { ...prev[i], scale: Math.max(0.5, (prev[i]?.scale || 1) - 0.1) } }))}
+                            className="text-slate-300 hover:text-blue-500"
+                          >
+                            <MinusCircle size={14} />
+                          </button>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2"
+                            step="0.01"
+                            value={photo.scale || 1}
+                            onChange={(e) => setUploadedPhotos(prev => ({ ...prev, [i]: { ...prev[i], scale: parseFloat(e.target.value) } }))}
+                            className="flex-1 accent-[#1877F2] h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <button
+                            onClick={() => setUploadedPhotos(prev => ({ ...prev, [i]: { ...prev[i], scale: Math.min(2, (prev[i]?.scale || 1) + 0.1) } }))}
+                            className="text-slate-300 hover:text-blue-500"
+                          >
+                            <PlusCircle size={14} />
+                          </button>
+                        </div>
+                      </div>
                     )}
 
-                    <div className="mt-6 flex gap-2 w-full">
-                      <button 
-                        onClick={() => pushQuery(selectedShape, designIdParam, totalFrames, i)}
-                        className="flex-[2] h-12 bg-white hover:bg-blue-50 text-slate-700 hover:text-[#1877F2] rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-slate-100 shadow-sm"
-                      >
-                        <LucideEdit size={14} /> Edit
-                      </button>
-                      <button 
-                        onClick={() => handleCopyFrame(i)}
-                        className="flex-1 h-12 bg-white hover:bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-slate-100 shadow-sm"
-                      >
-                        Copy
-                      </button>
+                    <div className="mt-8 text-center pb-4">
+                       <span className={`text-[11px] font-black uppercase tracking-wider`} style={{ color: borderColor === 'none' ? '#cbd5e1' : borderColor }}>
+                          {borderColor === 'none' ? 'No Border Selected' : (borderColor === '#E1306C' ? 'Pink Printed Border' : 'Custom Printed Border')}
+                       </span>
+                    </div>
+
+                    <div className="mt-auto flex gap-4 w-full pt-4">
+                       <button
+                         onClick={() => pushQuery(selectedShape, designIdParam, totalFrames, i)}
+                         className="flex-1 h-14 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center justify-center gap-2 text-slate-900 font-extrabold text-[13px] uppercase tracking-widest hover:bg-slate-50 transition-all group"
+                       >
+                         <LucideEdit size={18} className="text-[#1877F2] group-hover:scale-110 transition-transform" /> Edit
+                       </button>
+                       <button
+                         onClick={() => handleCopyFrame(i)}
+                         className="flex-1 h-14 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center justify-center gap-2 text-slate-900 font-extrabold text-[13px] uppercase tracking-widest hover:bg-slate-50 transition-all group"
+                       >
+                         <Copy size={18} className="text-[#1877F2] group-hover:scale-110 transition-transform" /> Copy
+                       </button>
                     </div>
                   </div>
-                  <span className="mt-4 text-[9px] font-black uppercase text-slate-400 tracking-widest bg-white px-4 py-1.5 rounded-full shadow-sm border border-slate-100">Frame {i + 1} of {totalFrames}</span>
+                  <span className="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] opacity-50">Frame {i + 1} of {totalFrames}</span>
                 </div>
               );
             })}
@@ -1728,125 +1836,135 @@ export default function StudioV2Page() {
         </main>
 
         {/* Floating Action Dash - High Fidelity PrintShoppy Style */}
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[150] w-[95%] max-w-4xl px-4">
-           <div className="bg-white rounded-[40px] shadow-[0_40px_100px_rgba(0,0,0,0.25)] overflow-hidden border border-slate-100/50 backdrop-blur-xl">
-              <div className="p-8 flex flex-col md:flex-row items-stretch gap-8">
-                 {/* Stats Left */}
-                 <div className="flex-1 flex flex-col justify-center">
-                    <div className="flex items-center gap-4 mb-2">
-                       <span className="text-2xl font-black text-slate-800 uppercase tracking-tight">Frames Count</span>
-                       <span className="text-5xl font-black text-[#1caf9c] tracking-tighter">{totalFrames}</span>
-                    </div>
-                    <div className="bg-[#f0faf8] self-start px-4 py-1.5 rounded-full border border-[#d1f2eb]">
-                      <span className="text-[12px] font-black uppercase tracking-[0.1em] text-[#1caf9c]">EACH FRAME ₹{displayPrice}/-</span>
-                    </div>
-                 </div>
-
-                 {/* Action Middle */}
-                 <div className="flex-[1.5] flex flex-col justify-center">
-                    <label className="w-full h-16 bg-[#F2F2F2] hover:bg-[#e8e8e8] text-slate-900 font-black text-[13px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all rounded-[2rem] cursor-pointer shadow-inner">
-                       <input type="file" className="hidden" multiple onChange={async (e) => {
-                          const files = Array.from(e.target.files || []);
-                          if (files.length === 0) return;
-                          setIsUploading(true);
-                          let currentCount = totalFrames;
-                          for (const file of files) {
-                             const formData = new FormData();
-                             formData.append("image", file);
-                             try {
-                                const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
-                                const data = await res.json();
-                                setUploadedPhotos(prev => ({ ...prev, [currentCount]: { url: data.url, scale: 0.8, x: 0, y: 0, rotate: 0 } }));
-                                currentCount++;
-                             } catch (err) { console.error(err); }
-                          }
-                          setIsUploading(false);
-                          pushQuery(selectedShape, designIdParam, currentCount);
-                       }} />
-                       <Plus size={22} strokeWidth={3} /> Add More Photos
-                    </label>
-                 </div>
-
-                 {/* Price Right */}
-                 <div className="flex-1 flex flex-col items-end justify-center">
-                    <div className="text-right">
-                       <span className="text-sm text-slate-300 font-black line-through italic decoration-slate-400/50">₹{originalPrice}</span>
-                       <div className="flex items-start justify-end gap-1">
-                          <span className="text-5xl font-black text-[#1877F2] tracking-tighter leading-none">₹{totalPrice}</span>
-                       </div>
-                       <div className="mt-2 text-right">
-                          <span className="bg-[#1caf9c] text-white text-[11px] font-black px-4 py-1 rounded-lg uppercase tracking-widest shadow-lg shadow-teal-500/20">₹{savings} SAVE</span>
-                       </div>
-                    </div>
-                 </div>
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[150] w-[95%] max-w-5xl px-4">
+          <div className="bg-white rounded-[45px] shadow-[0_50px_120px_rgba(0,0,0,0.3)] overflow-hidden border border-white/50 backdrop-blur-3xl p-8">
+            {/* Top Row: Info & Pricing */}
+            <div className="flex items-center justify-between mb-8 px-4">
+              {/* Left: Frames Count */}
+              <div className="flex items-center gap-8">
+                <div className="flex flex-col">
+                   <h5 className="text-[18px] font-black text-slate-800 leading-[1] tracking-tighter uppercase whitespace-nowrap">Frames<br/>Count</h5>
+                </div>
+                <span className="text-8xl font-black text-[#1caf9c] leading-none tracking-[-0.08em]">{totalFrames}</span>
+                <div className="flex flex-col gap-2">
+                   <span className="bg-[#f0faf8] text-[#1caf9c] text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest border border-[#d1f2eb]">Each ₹{Math.round(totalPrice/totalFrames)}</span>
+                </div>
               </div>
 
-              {/* Toolbar Bottom */}
-              <div className="bg-slate-50/80 p-5 flex gap-5 border-t border-gray-100">
-                 <div className="flex gap-3 flex-1 h-20 items-stretch">
-                   <button onClick={() => setActiveGalleryOverlay('size')} className="flex-1 bg-white rounded-[24px] flex flex-col items-center justify-center gap-1.5 hover:shadow-xl hover:scale-[1.03] transition-all border border-slate-100 shadow-sm group">
-                      <Maximize2 size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
-                      <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-slate-600 tracking-widest">Size</span>
-                   </button>
-                   <button onClick={() => setActiveGalleryOverlay('shape')} className="flex-1 bg-white rounded-[24px] flex flex-col items-center justify-center gap-1.5 hover:shadow-xl hover:scale-[1.03] transition-all border border-slate-100 shadow-sm group">
-                      <LayoutGrid size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
-                      <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-slate-600 tracking-widest">Shape</span>
-                   </button>
-                   <button onClick={() => setActiveGalleryOverlay('border')} className="flex-1 bg-white rounded-[24px] flex flex-col items-center justify-center gap-1.5 hover:shadow-xl hover:scale-[1.03] transition-all border border-slate-100 shadow-sm group">
-                      <PenTool size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
-                      <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-slate-600 tracking-widest">Border</span>
-                   </button>
-                 </div>
-
-                 <button 
-                  onClick={handleAddToCart}
-                  disabled={isCapturing}
-                  className="flex-[2.5] bg-[#1877F2] h-20 rounded-[24px] flex items-center justify-center gap-4 text-white font-black uppercase text-2xl shadow-[0_20px_50px_rgba(24,119,242,0.4)] hover:shadow-[0_25px_60px_rgba(24,119,242,0.5)] active:scale-[0.98] transition-all disabled:opacity-50"
-                 >
-                    {isCapturing ? <Loader2 size={28} className="animate-spin" /> : <>Add to Cart <ArrowRight size={28} strokeWidth={3} /></>}
-                 </button>
+              {/* Middle: Add More Photos */}
+              <div className="flex-1 max-w-md px-12">
+                <label className="w-full h-16 bg-[#f4f7f9] hover:bg-[#e9eff3] text-slate-700 font-extrabold text-xs uppercase tracking-widest flex items-center gap-4 px-3 transition-all rounded-full cursor-pointer shadow-sm border border-slate-100/50 group">
+                  <input type="file" className="hidden" multiple onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    setIsUploading(true);
+                    let currentCount = totalFrames;
+                    for (const file of files) {
+                      const formData = new FormData();
+                      formData.append("image", file);
+                      try {
+                        const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
+                        const data = await res.json();
+                        setUploadedPhotos(prev => ({ ...prev, [currentCount]: { url: data.url, x: 0, y: 0, scale: 0.8, rotate: 0 } }));
+                        currentCount++;
+                      } catch (err) { console.error(err); }
+                    }
+                    setIsUploading(false);
+                    pushQuery(selectedShape, designIdParam, currentCount);
+                  }} />
+                  <div className="bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                    <Plus size={18} strokeWidth={4} className="text-[#1877F2]" />
+                  </div>
+                  <span className="whitespace-nowrap">Add More Photos</span>
+                </label>
               </div>
-           </div>
+
+              {/* Right: Pricing */}
+              <div className="flex flex-col items-end">
+                  <span className="text-lg text-slate-300 font-black line-through leading-none opacity-60 italic tracking-tighter">₹{originalPrice}</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-7xl font-black text-[#1877F2] tracking-tighter leading-none mb-1">₹{totalPrice}</span>
+                  </div>
+                  <span className="bg-[#1caf9c] text-white text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest shadow-lg shadow-teal-500/20">₹{savings} SAVE</span>
+              </div>
+            </div>
+
+            {/* Bottom Row: Controls & Add to Cart */}
+            <div className="flex gap-6 items-center">
+              <div className="flex gap-4 items-stretch h-28">
+                <button onClick={() => setActiveGalleryOverlay('size')} className="w-24 bg-white rounded-[40px] flex flex-col items-center justify-center gap-2 hover:shadow-2xl hover:-translate-y-1 transition-all border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)] group">
+                  <Maximize2 size={22} className="text-[#1877F2]" strokeWidth={2.5} />
+                  <span className="text-[10px] font-black uppercase text-[#1877F2] tracking-widest">Size</span>
+                </button>
+                <button onClick={() => setActiveGalleryOverlay('shape')} className="w-24 bg-white rounded-[40px] flex flex-col items-center justify-center gap-2 hover:shadow-2xl hover:-translate-y-1 transition-all border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)] group">
+                  <LayoutGrid size={22} className="text-[#1877F2]" strokeWidth={2.5} />
+                  <span className="text-[10px] font-black uppercase text-[#1877F2] tracking-widest">Shape</span>
+                </button>
+                <button onClick={() => setActiveGalleryOverlay('border')} className="w-24 bg-white rounded-[40px] flex flex-col items-center justify-center gap-2 hover:shadow-2xl hover:-translate-y-1 transition-all border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.04)] group">
+                  <PenTool size={22} className="text-[#1877F2]" strokeWidth={2.5} />
+                  <span className="text-[10px] font-black uppercase text-[#1877F2] tracking-widest">Border</span>
+                </button>
+              </div>
+
+              <button
+                onClick={handleAddToCart}
+                disabled={isCapturing}
+                className="flex-1 bg-[#1877F2] h-28 rounded-[40px] flex items-center justify-center gap-6 text-white font-black uppercase text-3xl shadow-[0_20px_60px_rgba(24,119,242,0.4)] hover:shadow-[0_25px_80px_rgba(24,119,242,0.5)] active:scale-[0.98] transition-all disabled:opacity-50 group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12" />
+                {isCapturing ? <Loader2 size={36} className="animate-spin" /> : <>Add to Cart <ArrowRight size={36} strokeWidth={4} className="group-hover:translate-x-2 transition-transform" /></>}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Global Overlays */}
         {activeGalleryOverlay && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xl flex items-end justify-center sm:items-center p-4">
             <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl p-10 relative">
-               <button onClick={() => setActiveGalleryOverlay(null)} className="absolute top-6 right-8 text-slate-400 hover:text-slate-900"><X size={28} /></button>
-               <h4 className="text-2xl font-black uppercase tracking-tight mb-8 text-slate-800">Select {activeGalleryOverlay}</h4>
-               
-               <div className="grid grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto no-scrollbar pb-4">
-                  {activeGalleryOverlay === 'size' && sizeOptions.map((opt: any) => (
-                    <button key={opt.id} onClick={() => { setSelectedSize(opt); setActiveGalleryOverlay(null); }} className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-1 ${selectedSize?.label === opt.label ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-100 text-slate-600'}`}>
-                      <span className="text-lg font-black">{opt.label}</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">₹{opt.price}/-</span>
-                    </button>
-                  ))}
-                  {activeGalleryOverlay === 'shape' && (dynamicShapes.length > 0 ? dynamicShapes : [
-                    { id: 'square', label: 'Square' },
-                    { id: 'hexagon', label: 'Hexagon' },
-                    { id: 'circle', label: 'Circle' },
-                    { id: 'heart', label: 'Love' },
-                  ]).map((shape: any) => (
-                    <button key={shape.id} onClick={() => { pushQuery(shape.id, designIdParam, totalFrames); setActiveGalleryOverlay(null); }} className={`p-4 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'border-[#1877F2] bg-blue-50 text-[#1877F2] shadow-lg shadow-blue-500/10' : 'border-slate-100 text-slate-600 hover:border-slate-200 bg-white'}`}>
-                      {shape.image ? (
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-white shadow-sm border border-slate-100">
-                          <img src={resolveMedia(shape.image, API_URL)} className="w-full h-full object-cover" alt={shape.label} />
-                        </div>
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300">
-                          {shape.id.toLowerCase().includes('sq') && <Square size={24} />}
-                          {shape.id.toLowerCase().includes('circ') && <Circle size={24} />}
-                          {shape.id.toLowerCase().includes('heart') && <Heart size={24} />}
-                          {shape.id.toLowerCase().includes('hex') && <Hexagon size={24} />}
-                          {!['sq', 'circ', 'heart', 'hex'].some(s => shape.id.toLowerCase().includes(s)) && <Shapes size={24} />}
-                        </div>
-                      )}
-                      <span className="text-[10px] font-black uppercase tracking-widest">{shape.label}</span>
-                    </button>
-                  ))}
-               </div>
+              <button onClick={() => setActiveGalleryOverlay(null)} className="absolute top-6 right-8 text-slate-400 hover:text-slate-900"><X size={28} /></button>
+              <h4 className="text-2xl font-black uppercase tracking-tight mb-8 text-slate-800">SELECT {activeGalleryOverlay}</h4>
+
+              <div className={`${activeGalleryOverlay === 'shape' ? 'grid grid-cols-4' : (activeGalleryOverlay === 'border' ? 'flex items-center justify-between px-2 pb-6 pt-2' : 'grid grid-cols-2')} gap-4 max-h-[50vh] overflow-y-auto no-scrollbar pb-4`}>
+                {activeGalleryOverlay === 'size' && sizeOptions.map((opt: any) => (
+                  <button key={opt.id} onClick={() => { setSelectedSize(opt); setActiveGalleryOverlay(null); }} className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-1 ${selectedSize?.label === opt.label ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-100 text-slate-600'}`}>
+                    <span className="text-lg font-black">{opt.label}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">₹{opt.price}/-</span>
+                  </button>
+                ))}
+                {activeGalleryOverlay === 'shape' && (dynamicShapes.length > 0 ? dynamicShapes : [
+                  { id: 'Square', label: 'SQUARE' },
+                  { id: 'Hexagone', label: 'HEXAGONE' },
+                  { id: 'Circle', label: 'CIRCLE' },
+                  { id: 'Heart', label: 'HEART' },
+                ]).map((shape: any) => (
+                  <button key={shape.id} onClick={() => { pushQuery(shape.id, designIdParam, totalFrames); setActiveGalleryOverlay(null); }} className={`p-4 rounded-3xl transition-all flex flex-col items-center gap-3 group`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all border-2
+                        ${selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'border-blue-500 bg-blue-50 shadow-[0_10px_25px_rgba(59,130,246,0.15)]' : 'border-gray-100 bg-white hover:border-blue-200'}
+                        shadow-[0_8px_16px_rgba(0,0,0,0.04)]`}>
+                      {shape.id.toLowerCase().includes('sq') && <Square size={26} className={selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'text-blue-500' : 'text-gray-400'} strokeWidth={1.5} />}
+                      {shape.id.toLowerCase().includes('hex') && <Hexagon size={26} className={selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'text-blue-500' : 'text-gray-400'} strokeWidth={1.5} />}
+                      {shape.id.toLowerCase().includes('circ') && <Circle size={26} className={selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'text-blue-500' : 'text-gray-400'} strokeWidth={1.5} />}
+                      {shape.id.toLowerCase().includes('heart') && <Heart size={26} className={selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'text-blue-500' : 'text-gray-400'} strokeWidth={1.5} />}
+                      {!['sq', 'circ', 'heart', 'hex'].some(s => shape.id.toLowerCase().includes(s)) && <Shapes size={26} className="text-gray-400" />}
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${selectedShape.toLowerCase().includes(shape.id.toLowerCase()) ? 'text-blue-500' : 'text-gray-400'}`}>{shape.label}</span>
+                  </button>
+                ))}
+                {activeGalleryOverlay === 'border' && [
+                  { id: 'none', label: 'None', color: '#888888' },
+                  { id: 'black', label: 'Black', color: '#000000' },
+                  { id: 'blue', label: 'Blue', color: '#1877F2' },
+                  { id: 'green', label: 'Green', color: '#1caf9c' },
+                  { id: 'pink', label: 'Pink', color: '#E1306C' },
+                  { id: 'red', label: 'Red', color: '#ef4444' },
+                ].map((b: any) => (
+                  <button key={b.id} onClick={() => { setBorderColor(b.id === 'none' ? 'none' : b.color); setActiveGalleryOverlay(null); }} className="flex flex-col items-center gap-2 group">
+                    <div className={`w-10 h-6 rounded-full transition-all duration-300 ${borderColor === b.color || (b.id === 'none' && borderColor === 'none') ? 'ring-4 ring-blue-400/50 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'hover:scale-105 opacity-80 hover:opacity-100'}`} style={{ backgroundColor: b.color }} />
+                    <span className={`text-[10px] font-bold transition-colors ${borderColor === b.color || (b.id === 'none' && borderColor === 'none') ? 'text-blue-500' : 'text-slate-400 group-hover:text-slate-600'}`}>{b.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1857,12 +1975,12 @@ export default function StudioV2Page() {
   // VIEW 4.1: SINGLE PRODUCT MAIN EDITOR (e.g. Acrylic Photo Frames)
   // Unified view for both Portrait and Landscape custom designs
   const isCustomProduct = (designIdParam || (categoryParam && !categoryParam.includes('gallery'))) && !categoryParam.includes('gallery');
-  
+
   if (isCustomProduct && singleEditIndex === null) {
     const totalPrice = displayPrice || activeProductData?.price || 0;
     const originalPrice = (totalPrice * 1.5).toFixed(0);
     const hasPhoto = Object.keys(uploadedPhotos).length > 0;
-    
+
     // Ensure we have a design object
     const design = selectedDesign || designs[0] || { name: activeProductData?.name || 'Custom Product', id: 'custom', photoCount: 1 };
 
@@ -1924,8 +2042,8 @@ export default function StudioV2Page() {
                 <div className="relative bg-[#f0f0f0] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] rounded-[2px] border border-slate-300 overflow-hidden">
                   <div
                     className="w-[280px] md:w-[380px] lg:w-[480px] relative overflow-hidden bg-slate-100 cursor-move select-none"
-                    style={{ 
-                      aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : '1/1.3' 
+                    style={{
+                      aspectRatio: sizeW && sizeH ? `${sizeW}/${sizeH}` : '1/1.3'
                     }}
                   >
                     <DesignCanvas
@@ -2067,36 +2185,36 @@ export default function StudioV2Page() {
                     <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest italic">Note: High resolution images provide better print result.</p>
                   </div>
 
-                 {/* FREE GIFT + ADD TO CART */}
-                 <section className="space-y-3 pt-2">
-                   <div className="bg-[#fff8ee] border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
-                     <span className="text-xl">🎁</span>
-                     <div>
-                       <p className="text-[11px] font-black text-slate-900 uppercase">FREE GIFT <span className="text-orange-500">WORTH ₹299</span></p>
-                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Limited time offer!</p>
-                     </div>
-                   </div>
+                  {/* FREE GIFT + ADD TO CART */}
+                  <section className="space-y-3 pt-2">
+                    <div className="bg-[#fff8ee] border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                      <span className="text-xl">🎁</span>
+                      <div>
+                        <p className="text-[11px] font-black text-slate-900 uppercase">FREE GIFT <span className="text-orange-500">WORTH ₹299</span></p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Limited time offer!</p>
+                      </div>
+                    </div>
 
-                   <div className="flex items-center gap-3">
-                     <button
-                       onClick={() => handleAddToCart()}
-                       disabled={!hasPhoto || isCapturing}
-                       className={`flex-1 h-12 rounded-xl font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleAddToCart()}
+                        disabled={!hasPhoto || isCapturing}
+                        className={`flex-1 h-12 rounded-xl font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95
                                   ${hasPhoto ? 'bg-[#ef4444] text-white hover:bg-red-600 shadow-lg shadow-red-500/20' : 'bg-slate-100 text-slate-300 cursor-not-allowed border-2 border-dashed border-slate-200'}`}
-                     >
-                       {isCapturing ? <Loader2 size={18} className="animate-spin" /> : <ShoppingCart size={18} />}
-                       Add to Cart
-                     </button>
-                   </div>
-                   <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ships Fast · Safe Packaging · Quality Assured</p>
-                 </section>
+                      >
+                        {isCapturing ? <Loader2 size={18} className="animate-spin" /> : <ShoppingCart size={18} />}
+                        Add to Cart
+                      </button>
+                    </div>
+                    <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ships Fast · Safe Packaging · Quality Assured</p>
+                  </section>
                 </section>
 
               </div>
-          </div>
-
             </div>
-         </main>
+
+          </div>
+        </main>
       </div>
     );
   }
@@ -2205,21 +2323,21 @@ export default function StudioV2Page() {
                 <div className="absolute inset-0 overflow-hidden" style={{
                   borderRadius: selectedShape.toLowerCase().includes('circle') ? '50%' : (!selectedShape.toLowerCase().includes('heart') && !selectedShape.toLowerCase().includes('hex')) ? '4px' : '0'
                 }}>
-                {workingPhoto.url ? (
-                  <DesignCanvas
-                    design={selectedDesign}
-                    shape={selectedShape}
-                    photos={{ 0: workingPhoto }}
-                    onAdjust={(idx: number, state: any) => setWorkingPhoto(state)}
-                    isFinal={false}
-                    apiUrl={API_URL}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-50 flex items-center justify-center text-slate-200 uppercase font-black tracking-widest">No Image</div>
-                )}
+                  {workingPhoto.url ? (
+                    <DesignCanvas
+                      design={selectedDesign}
+                      shape={selectedShape}
+                      photos={{ 0: workingPhoto }}
+                      onAdjust={(idx: number, state: any) => setWorkingPhoto(state)}
+                      isFinal={false}
+                      apiUrl={API_URL}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-50 flex items-center justify-center text-slate-200 uppercase font-black tracking-widest">No Image</div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
             {/* Controls Area */}
             <div className="flex-1 bg-white p-12 overflow-y-auto">
@@ -2449,6 +2567,20 @@ export default function StudioV2Page() {
           </div>
         </div>
       </main>
+      {/* Global SVG Definitions (Masks) */}
+      <svg width="0" height="0" className="absolute pointer-events-none opacity-0">
+        <defs>
+          <clipPath id="heart-clip" clipPathUnits="objectBoundingBox">
+            <path d="M 0.5 0.9 C 0.1 0.6, 0 0.4, 0 0.25 C 0 0.1, 0.15 0, 0.3 0 C 0.4 0, 0.45 0.05, 0.5 0.15 C 0.55 0.05, 0.6 0, 0.7 0 C 0.85 0, 1 0.1, 1 0.25 C 1 0.4, 0.9 0.6, 0.5 0.9" />
+          </clipPath>
+          <clipPath id="hexagon-clip" clipPathUnits="objectBoundingBox">
+            <path d="M 0.25 0 L 0.75 0 L 1 0.5 L 0.75 1 L 0.25 1 L 0 0.5 Z" />
+          </clipPath>
+          <clipPath id="circle-clip" clipPathUnits="objectBoundingBox">
+            <circle cx="0.5" cy="0.5" r="0.5" />
+          </clipPath>
+        </defs>
+      </svg>
     </div>
   );
 }

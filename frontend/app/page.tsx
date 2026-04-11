@@ -15,7 +15,7 @@ const resolveMedia = (path: string, apiUrl: string) => {
 
 const DragScroll = ({ children, className = "", autoScroll = false }: { children: React.ReactNode, className?: string, autoScroll?: boolean }) => {
    const containerRef = useRef<HTMLDivElement>(null);
-   const directionRef = useRef(1); 
+   const directionRef = useRef(1);
    const animationRef = useRef<number>(0);
    const [isPaused, setIsPaused] = useState(false);
 
@@ -27,7 +27,7 @@ const DragScroll = ({ children, className = "", autoScroll = false }: { children
 
    useEffect(() => {
       if (!autoScroll || isPaused) return;
-      
+
       const animate = () => {
          if (containerRef.current && !isPaused) {
             const { scrollLeft, scrollWidth, clientWidth } = containerRef.current;
@@ -51,14 +51,14 @@ const DragScroll = ({ children, className = "", autoScroll = false }: { children
    }, [autoScroll, isPaused]);
 
    return (
-      <div 
-        className="relative group/nav w-full"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
+      <div
+         className="relative group/nav w-full"
+         onMouseEnter={() => setIsPaused(true)}
+         onMouseLeave={() => setIsPaused(false)}
       >
-         <button 
-           onClick={(e) => { e.preventDefault(); scrollBy(-400); }} 
-           className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/95 text-[#1877F2] shadow-xl p-3 rounded-full opacity-0 group-hover/nav:opacity-100 transition-all md:-ml-4 border border-blue-50 hover:scale-110 active:scale-95 hover:bg-white"
+         <button
+            onClick={(e) => { e.preventDefault(); scrollBy(-400); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/95 text-[#1877F2] shadow-xl p-3 rounded-full opacity-0 group-hover/nav:opacity-100 transition-all md:-ml-4 border border-blue-50 hover:scale-110 active:scale-95 hover:bg-white"
          >
             <ChevronLeft size={28} strokeWidth={3} />
          </button>
@@ -69,9 +69,9 @@ const DragScroll = ({ children, className = "", autoScroll = false }: { children
          >
             {children}
          </div>
-         <button 
-           onClick={(e) => { e.preventDefault(); scrollBy(400); }} 
-           className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/95 text-[#1877F2] shadow-xl p-3 rounded-full opacity-0 group-hover/nav:opacity-100 transition-all md:-mr-4 border border-blue-50 hover:scale-110 active:scale-95 hover:bg-white"
+         <button
+            onClick={(e) => { e.preventDefault(); scrollBy(400); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/95 text-[#1877F2] shadow-xl p-3 rounded-full opacity-0 group-hover/nav:opacity-100 transition-all md:-mr-4 border border-blue-50 hover:scale-110 active:scale-95 hover:bg-white"
          >
             <ChevronRight size={28} strokeWidth={3} />
          </button>
@@ -85,8 +85,10 @@ export default function Home() {
    const [banners, setBanners] = useState<any[]>([]);
    const [heroIndex, setHeroIndex] = useState(0);
    const [searchQuery, setSearchQuery] = useState("");
+   const [showSuggestions, setShowSuggestions] = useState(false);
    const [settings, setSettings] = useState<any>(null);
    const router = useRouter();
+   const searchRef = useRef<HTMLFormElement>(null);
 
    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -105,14 +107,28 @@ export default function Home() {
       return () => clearInterval(timer);
    }, [banners]);
 
+   useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+         if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+            setShowSuggestions(false);
+         }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+   }, []);
+
+   const safeCategories = Array.isArray(categories) ? categories : [];
+
+   const filteredSuggestions = searchQuery.length > 1
+      ? safeCategories.filter(c => c.isActive && c.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 6)
+      : [];
+
    const handleSearch = (e: React.FormEvent) => {
       e.preventDefault();
       if (searchQuery.trim()) {
          router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
       }
    };
-
-   const safeCategories = Array.isArray(categories) ? categories : [];
 
    const getCategoriesByTag = (tagName: string) => {
       return safeCategories.filter((c: any) => c.isActive && c.tags?.toLowerCase().includes(tagName.toLowerCase()));
@@ -138,8 +154,8 @@ export default function Home() {
 
                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 justify-center">
                   {taggedCategories.map((item: any) => {
-                      const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery');
-                      const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
+                     const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet');
+                     const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
 
                      return (
                         <Link key={item.id} href={href} className="flex flex-col items-center group text-center hover:-translate-y-1 transition-all">
@@ -167,28 +183,62 @@ export default function Home() {
       <div className="bg-white min-h-screen">
 
          {/* MEGA HEADER SECTION: Products Perfectly Personalized For You + Pill Search */}
-         <section className="pt-6 pb-8 bg-white border-b border-blue-50/50 relative overflow-hidden">
+         <section className="pt-4 pb-2 bg-white border-b border-blue-50/50 relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl"></div>
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-50/20 rounded-full -ml-32 -mb-32 blur-3xl"></div>
 
-            <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
+            <div className="max-w-[1400px] mx-auto px-4 text-center relative z-10">
                <h2 className="text-2xl md:text-4xl font-bold text-[#1877F2] mb-6 leading-tight tracking-tight">
                   Products, Perfectly Personalized For You
                </h2>
-               <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto group">
+               <form onSubmit={handleSearch} className="relative max-w-[1400px] mx-auto group mb-6" ref={searchRef}>
                   <div className="relative flex items-center">
                      <input
                         type="text"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search for Hearts Effect Photo Frames, Logo Badges etc."
-                        className="w-full h-12 pl-8 pr-12 rounded-full border border-blue-100/50 bg-[#EAF3FE]/80 text-slate-700 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 transition-all placeholder:text-slate-400 font-sans shadow-sm"
+                        onChange={(e) => {
+                           setSearchQuery(e.target.value);
+                           setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder="Search for Acrylic Photo Stands, T-Shirts etc."
+                        className="w-full h-12 md:h-18 pl-10 pr-24 rounded-full border border-blue-100 bg-blue-50/40 text-slate-700 text-lg md:text-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300 font-medium shadow-[0_15px_45px_-10px_rgba(0,0,0,0.05)]"
                      />
-                     <div className="absolute right-4 text-slate-400 group-hover:text-blue-500 transition-colors">
-                        <Search size={18} strokeWidth={2.5} />
+                     <div className="absolute right-0 h-full flex items-center pr-8 space-x-6">
+                        <div className="w-[1px] h-8 bg-blue-200/50"></div>
+                        <div className="text-slate-300 group-hover:text-blue-500 transition-all group-hover:scale-110">
+                           <Search size={28} strokeWidth={2.5} />
+                        </div>
                      </div>
                      <button type="submit" className="hidden">Search</button>
                   </div>
+
+                  {/* LIVE SUGGESTIONS DROPDOWN (Matches Reference) */}
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                     <div className="absolute top-[calc(100%-24px)] left-0 right-0 bg-white border-x border-b border-blue-100 rounded-b-[24px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
+                           <div className="flex flex-col">
+                              {filteredSuggestions.map((cat: any, index: number) => {
+                                 const isCustom = cat.slug.includes('acrylic') || cat.name.toLowerCase().includes('acrylic') || cat.name.toLowerCase().includes('lamp') || cat.name.toLowerCase().includes('clock') || cat.name.toLowerCase().includes('gallery') || cat.slug.includes('magnet');
+                                 const href = isCustom ? `/studio-v2?category=${cat.slug}` : `/shop?category=${cat.slug}`;
+                                 
+                                 return (
+                                    <Link 
+                                       key={cat.id} 
+                                       href={href}
+                                       className={`flex items-center w-full px-8 py-4 hover:bg-slate-50 transition-colors text-left group ${index !== filteredSuggestions.length - 1 ? 'border-b border-slate-100' : ''}`}
+                                       onClick={() => setShowSuggestions(false)}
+                                    >
+                                       <span className="text-[15px] font-medium text-slate-600 group-hover:text-blue-600 transition-colors">
+                                          {cat.name}
+                                       </span>
+                                    </Link>
+                                 );
+                              })}
+                           </div>
+                        </div>
+                     </div>
+                  )}
                </form>
                <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {['Acrylic Prints', 'Custom Cases', 'Wall Art'].map(tag => (
@@ -201,12 +251,12 @@ export default function Home() {
          </section>
 
          {/* MAIN CATEGORIES (POPULAR PRODUCTS) - Seamless Slow Marquee */}
-         <section className="bg-[#FCF6EE] py-7 px-0 border-y border-[#F0E6D8] overflow-hidden relative">
-            <div className="max-w-[1400px] mx-auto px-4 md:px-8 mb-2 relative flex flex-col md:flex-row items-center justify-center">
-               <h2 className="text-xl md:text-[22px] font-bold text-[#4B3B2B] tracking-widest uppercase mb-4 md:mb-8 pb-3 inline-block relative">
+         <section className="bg-[#FCF6EE] py-4 px-0 border-y border-[#F0E6D8] overflow-hidden relative">
+            <div className="max-w-[1400px] mx-auto px-4 md:px-8 mb-1 relative flex flex-col md:flex-row items-center justify-center">
+               <h2 className="text-xl md:text-[22px] font-bold text-[#4B3B2B] tracking-widest uppercase mb-2 md:mb-4 pb-2 inline-block relative">
                   POPULAR PRODUCTS
                </h2>
-               <Link href="/shop" className="md:absolute right-4 md:right-8 text-[11px] font-bold text-[#1877F2] hover:underline uppercase tracking-widest mb-4 md:mb-8 hover:text-[#4B3B2B] transition-colors rounded border border-blue-100 hover:border-blue-300 px-3 py-1">
+               <Link href="/shop" className="md:absolute right-4 md:right-8 text-[11px] font-bold text-[#1877F2] hover:underline uppercase tracking-widest mb-2 md:mb-4 hover:text-[#4B3B2B] transition-colors rounded border border-blue-100 hover:border-blue-300 px-3 py-1">
                   View All &gt;
                </Link>
             </div>
@@ -215,12 +265,12 @@ export default function Home() {
                <DragScroll className="w-full" autoScroll={true}>
                   <div className="flex gap-6 px-4 md:px-8 items-stretch w-max mx-auto md:mx-0">
                      {safeCategories.filter(c => !c.parentId && c.isActive).sort((a, b) => (a.order || 0) - (b.order || 0)).map((item: any) => {
-                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery');
+                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet');
                         const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
 
-                        return (
-                           <Link key={`pop-${item.id}`} href={href} className="flex flex-col items-center w-[160px] md:w-[190px] transition-all flex-shrink-0 hover:-translate-y-1 focus:outline-none snap-start">
-                              <div className="w-full aspect-square overflow-hidden mb-3 rounded-[16px] shadow-sm group-hover:shadow-md transition-shadow">
+                         return (
+                           <Link key={`pop-${item.id}`} href={href} className="flex flex-col items-center w-[180px] md:w-[260px] transition-all flex-shrink-0 hover:-translate-y-1 focus:outline-none snap-start">
+                              <div className="w-full aspect-square overflow-hidden mb-4 rounded-[24px] shadow-sm group-hover:shadow-md transition-shadow border border-slate-100">
                                  {item.image ? (
                                     <img
                                        src={resolveMedia(item.image, API_URL)}
@@ -235,7 +285,7 @@ export default function Home() {
                                     </div>
                                  )}
                               </div>
-                              <h3 className="text-[13px] md:text-[14px] font-bold text-gray-800 transition-colors whitespace-normal text-center min-h-[40px] px-2 flex items-start justify-center capitalize">
+                              <h3 className="text-[14px] md:text-[15px] font-bold text-gray-800 transition-colors whitespace-normal text-center min-h-[40px] px-2 flex items-start justify-center capitalize leading-tight">
                                  {item.name}
                               </h3>
                            </Link>
@@ -247,26 +297,26 @@ export default function Home() {
          </section>
 
          {/* NEW ARRIVALS: Latest 5 Categories + Latest 5 Products */}
-         <section className="bg-[#F7F4EF] py-7 px-4 md:px-8 border-b border-[#F0E6D8] overflow-hidden">
-               <div className="flex items-center justify-center relative mb-8 group/header">
-                  <h2 className="text-xl md:text-[22px] font-bold text-[#4B3B2B] tracking-widest uppercase pb-3 inline-block relative">
-                     NEW ARRIVALS
-                  </h2>
-                  <Link href="/shop" className="absolute right-0 text-[11px] font-bold text-[#1877F2] hover:underline uppercase tracking-widest hover:text-[#4B3B2B] transition-colors rounded border border-blue-100 hover:border-blue-300 px-3 py-1">
-                     View All &gt;
-                  </Link>
-               </div>
+         <section className="bg-[#eff8ff] py-7 px-4 md:px-8 border-b border-[#F0E6D8] overflow-hidden">
+            <div className="flex items-center justify-center relative mb-8 group/header">
+               <h2 className="text-xl md:text-[22px] font-bold text-[#4B3B2B] tracking-widest uppercase pb-3 inline-block relative">
+                  NEW ARRIVALS
+               </h2>
+               <Link href="/shop" className="absolute right-0 text-[11px] font-bold text-[#1877F2] hover:underline uppercase tracking-widest hover:text-[#4B3B2B] transition-colors rounded border border-blue-100 hover:border-blue-300 px-3 py-1">
+                  View All &gt;
+               </Link>
+            </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-[1400px] mx-auto justify-center pb-6">
                {(() => {
                   const combined = [
-                     ...safeCategories.filter(c => c.isActive).map(c => ({ ...c, _itemType: 'category' })),
-                     ...(Array.isArray(products) ? products : []).filter(p => p.status === 'PUBLISHED').map(p => ({ ...p, _itemType: 'product' }))
+                     ...safeCategories.filter(c => c.isActive && c.image && c.name?.length > 2).map(c => ({ ...c, _itemType: 'category' })),
+                     ...(Array.isArray(products) ? products : []).filter(p => p.status === 'PUBLISHED' && (p.images?.[0] || p.previewImage) && p.name?.length > 2).map(p => ({ ...p, _itemType: 'product' }))
                   ].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 5);
 
                   return combined.map((item: any) => {
                      if (item._itemType === 'category') {
-                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery');
+                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet');
                         const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
                         return (
                            <Link key={`new-cat-${item.id}`} href={href} className="flex flex-col items-center group text-center hover:-translate-y-1 transition-all">
@@ -306,6 +356,40 @@ export default function Home() {
 
          {/* TAG BASED SECTIONS mimicking the Printshoppy layout */}
          <CatalogSection title="WALL DECORATIVES" tag="Wall Decoratives" />
+
+         {/* CUSTOM SECTION: WALL PHOTO FRAMES (MATCHING ATTACHMENT) */}
+         <section className="bg-[#ebfff4]/80 py-10 px-4 md:px-8 border-b border-green-100/50">
+            <div className="max-w-[1400px] mx-auto text-center">
+               <div className="flex items-center justify-center relative mb-8 group/header">
+                  <h2 className="text-xl md:text-[22px] font-bold text-[#064e3b] tracking-widest uppercase pb-2 inline-block relative font-sans">
+                     WALL PHOTO FRAMES
+                  </h2>
+                  <Link href="/shop?category=wall-photo-frames" className="absolute right-0 text-[11px] font-bold text-[#1877F2] hover:underline uppercase tracking-widest hover:text-[#064e3b] transition-colors rounded border border-green-100 hover:border-green-300 px-3 py-1">
+                     View All &gt;
+                  </Link>
+               </div>
+
+               <div className="grid grid-cols-2 md:grid-cols-5 gap-6 justify-center">
+                  {[
+                     { name: 'Hearts Effect Photo Frames', price: 399, image: 'https://images.unsplash.com/photo-1544413660-299165566b1d?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Glitter Photo Frames', price: 399, image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Classic Photo Frames', price: 399, image: 'https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Sparkle Effect Photo Frames', price: 399, image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Matte Photo Frames', price: 399, image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=600' }
+                  ].map((item, i) => (
+                     <div key={i} className="flex flex-col items-center group transition-all hover:-translate-y-1">
+                        <div className="w-full aspect-[4/5] relative overflow-hidden rounded-[20px] shadow-sm border border-slate-200 bg-white mb-4">
+                           <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        </div>
+                        <div className="flex flex-col items-center px-2">
+                           <h3 className="text-[13px] md:text-sm font-bold text-slate-800 leading-tight mb-2 text-center h-[40px] flex items-center">{item.name}</h3>
+                           <p className="text-[#065f46] font-black text-xs tracking-widest uppercase">From ₹{item.price}/-</p>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+         </section>
          <CatalogSection title="DESK DECORATIVES" tag="Desk Decoratives" isAltBg={true} />
 
          {/* CUSTOM TAG SECTION: HOME DECORATIVES (MATCHING ATTACHMENT) */}
@@ -319,7 +403,7 @@ export default function Home() {
                      View All &gt;
                   </Link>
                </div>
-               
+
                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 justify-center">
                   {[
                      { name: 'Kitchen Identifiers', oldPrice: 699, price: 499, soldOut: true, image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=600' },
@@ -329,25 +413,25 @@ export default function Home() {
                      { name: 'Fridge Magnets', oldPrice: null, price: 149, soldOut: false, suffix: 'Each*', image: 'https://images.unsplash.com/photo-1583945321524-70498a54ede8?auto=format&fit=crop&q=80&w=600' },
                      { name: 'Luggage Tag', oldPrice: 399, price: 249, soldOut: false, image: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&q=80&w=600' }
                   ].map((item, i) => (
-                    <div key={i} className="flex flex-col items-center group transition-all hover:-translate-y-1">
-                       <div className="w-full aspect-square relative overflow-hidden rounded-[20px] shadow-sm border border-slate-200 bg-white mb-3">
-                          {item.soldOut && (
-                             <div className="absolute top-3 -right-8 bg-[#E3323A] text-white text-[8px] font-bold py-1 px-8 rotate-45 z-20 shadow-sm tracking-widest uppercase">
-                                SOLD OUT
-                             </div>
-                          )}
-                          <img src={item.image} alt={item.name} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${item.soldOut ? 'grayscale-[0.5]' : ''}`} />
-                       </div>
-                       <div className="flex flex-col items-center px-2">
-                          <h3 className="text-[13px] md:text-sm font-bold text-slate-800 leading-tight mb-1.5 text-center items-start justify-center capitalize">{item.name}</h3>
-                          <div className="flex items-center gap-1.5">
-                             {item.oldPrice && <span className="text-[10px] text-slate-400 line-through font-bold">₹{item.oldPrice}/-</span>}
-                             <span className="text-[12px] font-black text-[#2D3A82]">
-                                {item.oldPrice === null ? 'From ' : ''}₹{item.price}/-
-                             </span>
-                          </div>
-                       </div>
-                    </div>
+                     <div key={i} className="flex flex-col items-center group transition-all hover:-translate-y-1">
+                        <div className="w-full aspect-square relative overflow-hidden rounded-[20px] shadow-sm border border-slate-200 bg-white mb-3">
+                           {item.soldOut && (
+                              <div className="absolute top-3 -right-8 bg-[#E3323A] text-white text-[8px] font-bold py-1 px-8 rotate-45 z-20 shadow-sm tracking-widest uppercase">
+                                 SOLD OUT
+                              </div>
+                           )}
+                           <img src={item.image} alt={item.name} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${item.soldOut ? 'grayscale-[0.5]' : ''}`} />
+                        </div>
+                        <div className="flex flex-col items-center px-2">
+                           <h3 className="text-[13px] md:text-sm font-bold text-slate-800 leading-tight mb-1.5 text-center items-start justify-center capitalize">{item.name}</h3>
+                           <div className="flex items-center gap-1.5">
+                              {item.oldPrice && <span className="text-[10px] text-slate-400 line-through font-bold">₹{item.oldPrice}/-</span>}
+                              <span className="text-[12px] font-black text-[#2D3A82]">
+                                 {item.oldPrice === null ? 'From ' : ''}₹{item.price}/-
+                              </span>
+                           </div>
+                        </div>
+                     </div>
                   ))}
                </div>
             </div>
@@ -413,14 +497,14 @@ export default function Home() {
                   </Link>
                </div>
                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">Premium Protection & Style</p>
-               
+
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                   <Link href="/shop?category=mobile-cases" className="flex flex-col items-center group">
                      <div className="w-full aspect-[21/9] bg-white rounded-2xl overflow-hidden shadow-sm relative border border-slate-100">
-                        <img 
-                           src="https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&q=80&w=1200" 
-                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                           alt="Mobile Cases" 
+                        <img
+                           src="https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&q=80&w=1200"
+                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                           alt="Mobile Cases"
                         />
                      </div>
                      <div className="mt-4">
@@ -428,13 +512,13 @@ export default function Home() {
                         <p className="text-blue-600 font-black text-[10px] tracking-widest uppercase">From ₹299/-</p>
                      </div>
                   </Link>
- 
+
                   <Link href="/shop?category=phone-stands" className="flex flex-col items-center group">
                      <div className="w-full aspect-[21/9] bg-white rounded-2xl overflow-hidden shadow-sm relative border border-slate-100">
-                        <img 
-                           src="https://images.unsplash.com/photo-1586940882873-41f237ef8052?auto=format&fit=crop&q=80&w=1200" 
-                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                           alt="Phone Stands" 
+                        <img
+                           src="https://images.unsplash.com/photo-1586940882873-41f237ef8052?auto=format&fit=crop&q=80&w=1200"
+                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                           alt="Phone Stands"
                         />
                      </div>
                      <div className="mt-4">
@@ -458,23 +542,23 @@ export default function Home() {
                   </Link>
                </div>
                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">Professional Branding Solutions</p>
-               
+
                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
                   {[
-                    { name: 'Custom Trophies', price: 499, image: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?auto=format&fit=crop&q=80&w=600' },
-                    { name: 'Office Notebooks', price: 199, image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&q=80&w=600' },
-                    { name: 'Office Bottles', price: 399, image: 'https://images.unsplash.com/photo-1610719064611-15c39dc2e19a?auto=format&fit=crop&q=80&w=600' },
-                    { name: 'Letterheads', price: 600, image: 'https://images.unsplash.com/photo-1586717791821-3f44a563dc4c?auto=format&fit=crop&q=80&w=600' },
-                    { name: 'Desk Calendars', price: 299, image: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600' }
+                     { name: 'Custom Trophies', price: 499, image: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Office Notebooks', price: 199, image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Office Bottles', price: 399, image: 'https://images.unsplash.com/photo-1610719064611-15c39dc2e19a?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Letterheads', price: 600, image: 'https://images.unsplash.com/photo-1586717791821-3f44a563dc4c?auto=format&fit=crop&q=80&w=600' },
+                     { name: 'Desk Calendars', price: 299, image: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600' }
                   ].map((item, i) => (
-                    <Link key={i} href="/shop" className="group flex flex-col items-center">
-                       <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white mb-3 relative">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500"></div>
-                       </div>
-                       <h3 className="text-[13px] font-bold text-slate-800 mb-1 active:text-blue-600 transition-colors capitalize">{item.name}</h3>
-                       <p className="text-blue-600 font-black text-[10px] tracking-widest uppercase">From ₹{item.price}/-</p>
-                    </Link>
+                     <Link key={i} href="/shop" className="group flex flex-col items-center">
+                        <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white mb-3 relative">
+                           <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500"></div>
+                        </div>
+                        <h3 className="text-[13px] font-bold text-slate-800 mb-1 active:text-blue-600 transition-colors capitalize">{item.name}</h3>
+                        <p className="text-blue-600 font-black text-[10px] tracking-widest uppercase">From ₹{item.price}/-</p>
+                     </Link>
                   ))}
                </div>
             </div>

@@ -36,8 +36,8 @@ export const CategoryBanner = ({
 
         if (res.ok && data && data.id) {
           setBanner(data);
-        } else {
-          // Further fallback: fetch first active banner if no category match
+        } else if (!categoryId) {
+          // Fallback to first active banner ONLY if we're not looking for a specific category
           const allRes = await fetch(`${API_URL}/banners`, { cache: 'no-store' });
           const allData = await allRes.json();
           if (Array.isArray(allData) && allData.length > 0) {
@@ -45,6 +45,9 @@ export const CategoryBanner = ({
           } else {
             setBanner(null);
           }
+        } else {
+          // If category banner is missing, don't show a random one
+          setBanner(null);
         }
       } catch {
         setError(true);
