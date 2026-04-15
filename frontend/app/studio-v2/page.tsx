@@ -123,6 +123,7 @@ export default function StudioV2Page() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [focusedSlotIdx, setFocusedSlotIdx] = useState<number | null>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [designFilter, setDesignFilter] = useState<'all' | 'popular'>('all');
   const [categoryBanner, setCategoryBanner] = useState<string | null>(null);
@@ -1464,6 +1465,55 @@ export default function StudioV2Page() {
                               <span className={currentSpreadIndex === 0 ? 'text-[#1877F2]' : ''}>{currentSpreadIndex === 0 ? 'Front cover' : `Page ${currentSpreadIndex * 2}`}</span>
                             </div>
 
+                            {/* Floating Image Toolbar (Printshoppy Style) */}
+                            {isEditMode && focusedSlotIdx !== null && uploadedPhotos[focusedSlotIdx] && (
+                              <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[80] animate-in slide-in-from-top-4 duration-300">
+                                <div className="bg-white/95 backdrop-blur-2xl px-6 py-3 rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.25)] border border-slate-50 flex items-center gap-6">
+                                  <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
+                                    <button onClick={() => {
+                                      const s = (uploadedPhotos[focusedSlotIdx]?.scale || 1) - 0.1;
+                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], scale: Math.max(0.1, s) } }));
+                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><ZoomOut size={18} /></button>
+                                    <span className="text-[10px] font-black w-8 text-center text-slate-900">{Math.round((uploadedPhotos[focusedSlotIdx]?.scale || 1) * 100)}%</span>
+                                    <button onClick={() => {
+                                      const s = (uploadedPhotos[focusedSlotIdx]?.scale || 1) + 0.1;
+                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], scale: Math.min(10, s) } }));
+                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><ZoomIn size={18} /></button>
+                                  </div>
+
+                                  <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
+                                    <button onClick={() => {
+                                      const r = (uploadedPhotos[focusedSlotIdx]?.rotate || 0) - 90;
+                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], rotate: r } }));
+                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><RotateCcw size={18} /></button>
+                                    <button onClick={() => {
+                                      const r = (uploadedPhotos[focusedSlotIdx]?.rotate || 0) + 90;
+                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], rotate: r } }));
+                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><RotateCw size={18} /></button>
+                                  </div>
+
+                                  <div className="flex items-center gap-4">
+                                     <button onClick={() => {
+                                       if(fileInputRef.current) fileInputRef.current.click();
+                                     }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><ImageIcon size={18} /></button>
+                                     <button onClick={() => {
+                                       setUploadedPhotos(prev => {
+                                         const next = { ...prev };
+                                         delete next[focusedSlotIdx];
+                                         return next;
+                                       });
+                                       setFocusedSlotIdx(null);
+                                     }} className="p-2 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                     <button 
+                                       onClick={() => { setIsEditMode(false); setFocusedSlotIdx(null); }}
+                                       className="ml-4 px-6 py-2 bg-slate-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                                     >
+                                       Apply
+                                     </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {/* Edit Mode Hint */}
                             {isEditMode && (
                               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] bg-[#1877F2] text-white text-[10px] font-black uppercase tracking-widest px-6 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-bounce">
@@ -1498,6 +1548,7 @@ export default function StudioV2Page() {
                                   ) : uploadedPhotos[currentSpreadIndex * 2 - 1] ? (
                                     <Slot 
                                       idx={currentSpreadIndex * 2 - 1}
+                                      onDoubleClick={() => { setIsEditMode(true); setFocusedSlotIdx(currentSpreadIndex * 2 - 1); }}
                                       photos={uploadedPhotos}
                                       isFinal={!isEditMode}
                                       apiUrl={API_URL}
@@ -1515,6 +1566,7 @@ export default function StudioV2Page() {
                                   {uploadedPhotos[currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2] ? (
                                     <Slot 
                                       idx={currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2}
+                                      onDoubleClick={() => { setIsEditMode(true); setFocusedSlotIdx(currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2); }}
                                       photos={uploadedPhotos}
                                       isFinal={!isEditMode}
                                       apiUrl={API_URL}

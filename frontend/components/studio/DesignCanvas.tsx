@@ -64,7 +64,7 @@ export interface IconState {
   rotate: number;
 }
 
-export function Slot({ idx, photos, isFinal, onUpload, onAdjust, shape, apiUrl, showOnlyCues = false }: any) {
+export function Slot({ idx, photos, isFinal, onUpload, onAdjust, onDoubleClick, shape, apiUrl, showOnlyCues = false }: any) {
   const inputRef = useRef<HTMLInputElement>(null);
   const photo = photos?.[idx];
   const photoUrl = resolveMedia(typeof photo === 'string' ? photo : photo?.url || "", apiUrl);
@@ -116,7 +116,7 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, shape, apiUrl, 
   };
 
   const selectBtn = !hasPhoto && (
-    <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-auto">
+    <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-auto p-1">
       <input 
         id={`upload-${idx}`}
         ref={inputRef} 
@@ -126,16 +126,15 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, shape, apiUrl, 
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (file && onUpload) {
-            // RELAY TO PARENT FOR SERVER UPLOAD
             onUpload(idx, file);
           }
         }} 
       />
       <label 
         htmlFor={`upload-${idx}`}
-        className="cursor-pointer bg-[#1877F2] text-white px-8 py-3.5 rounded-2xl font-black text-[14px] leading-tight uppercase tracking-widest shadow-[0_10px_25px_-5px_rgba(24,119,242,0.4)] hover:bg-[#166fe5] hover:scale-105 active:scale-95 transition-all text-center filter drop-shadow-md flex items-center gap-3 border-2 border-white/20"
+        className="cursor-pointer bg-[#1877F2] text-white px-3 py-2 rounded-xl font-black text-[11px] leading-tight uppercase tracking-tight shadow-lg hover:bg-[#166fe5] hover:scale-105 active:scale-95 transition-all text-center flex items-center gap-1.5 border-2 border-white/20 whitespace-nowrap"
       >
-        <Upload size={18} strokeWidth={3} />
+        <Upload size={14} strokeWidth={3} />
         Select Photo
       </label>
     </div>
@@ -152,23 +151,18 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, shape, apiUrl, 
         {hasPhoto && !isFinal && (
           <button 
             onClick={(e) => { e.stopPropagation(); onUpload(idx, ""); }}
-            className="absolute top-3 right-3 z-[60] w-8 h-8 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90 pointer-events-auto"
+            className="absolute top-1 right-1 z-[60] w-6 h-6 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90 pointer-events-auto"
             title="Remove Photo"
           >
-            <X size={16} strokeWidth={3} />
+            <X size={12} strokeWidth={3} />
           </button>
         )}
         {hasPhoto && !isFinal && (
-          <div className="absolute bottom-2 inset-x-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <div className="bg-white/95 backdrop-blur-xl px-2 py-1 rounded-lg shadow-xl shadow-black/10 border border-slate-100 flex items-center gap-1 scale-75 origin-bottom pointer-events-auto">
-              <button onClick={(e) => { e.stopPropagation(); onAdjust(idx, { ...currentPhoto, scale: Math.max(0.1, scale - 0.1) }) }} className="p-1.5 hover:bg-slate-50 text-slate-400 rounded"><ZoomOut size={14} /></button>
-              <span className="text-[12px]  w-8 text-center">{Math.round(scale * 100)}%</span>
-              <button onClick={(e) => { e.stopPropagation(); onAdjust(idx, { ...currentPhoto, scale: Math.min(10, scale + 0.1) }) }} className="p-1.5 hover:bg-slate-50 text-slate-400 rounded"><ZoomIn size={14} /></button>
-              <div className="w-[1px] h-3 bg-slate-100 mx-1" />
-              <button onClick={(e) => { e.stopPropagation(); onAdjust(idx, { ...currentPhoto, rotate: rotate - 90 }) }} className="p-1.5 hover:bg-slate-50 text-slate-400 rounded"><RotateCcw size={13} /></button>
-              <button onClick={(e) => { e.stopPropagation(); onAdjust(idx, { ...currentPhoto, rotate: rotate + 90 }) }} className="p-1.5 hover:bg-slate-50 text-slate-400 rounded"><RotateCw size={13} /></button>
-              <div className="w-[1px] h-3 bg-slate-100 mx-1" />
-              <button onClick={(e) => { e.stopPropagation(); onUpload(idx, ""); }} className="p-1.5 hover:bg-rose-50 text-rose-500 rounded"><Trash2 size={13} /></button>
+          <div className="absolute bottom-1 inset-x-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="bg-white/95 backdrop-blur-xl px-1.5 py-0.5 rounded-lg shadow-xl border border-slate-100 flex items-center gap-1 scale-75 origin-bottom pointer-events-auto">
+              <button onClick={(e) => { e.stopPropagation(); onAdjust(idx, { ...currentPhoto, scale: Math.max(0.1, scale - 0.1) }) }} className="p-1 hover:bg-slate-50 text-slate-400 rounded"><ZoomOut size={12} /></button>
+              <span className="text-[10px] w-6 text-center">{Math.round(scale * 100)}%</span>
+              <button onClick={(e) => { e.stopPropagation(); onAdjust(idx, { ...currentPhoto, scale: Math.min(10, scale + 0.1) }) }} className="p-1 hover:bg-slate-50 text-slate-400 rounded"><ZoomIn size={12} /></button>
             </div>
           </div>
         )}
@@ -177,22 +171,24 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, shape, apiUrl, 
   }
 
   return (
-    <div className={`absolute inset-0 w-full h-full overflow-hidden pointer-events-none ${!hasPhoto ? 'bg-black/5 flex items-center justify-center' : ''}`}>
+    <div 
+      onDoubleClick={onDoubleClick}
+      className={`absolute inset-0 w-full h-full overflow-hidden ${hasPhoto && !isFinal ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'} ${!hasPhoto ? 'bg-black/5 flex items-center justify-center' : ''}`}>
       {selectBtn}
       {hasPhoto && !isFinal && (
         <button 
           onClick={(e) => { e.stopPropagation(); onUpload(idx, ""); }}
-          className="absolute top-3 right-3 z-[60] w-8 h-8 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90 pointer-events-auto"
+          className="absolute top-2 right-2 z-[60] w-7 h-7 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90 pointer-events-auto"
           title="Remove Photo"
         >
-          <X size={16} strokeWidth={3} />
+          <X size={14} strokeWidth={3} />
         </button>
       )}
       {hasPhoto && (
         <img
           src={safeBase64Url || resolveMedia(photoUrl, apiUrl)}
           crossOrigin="anonymous"
-          className="absolute inset-0 select-none pointer-events-none w-full h-full object-contain"
+          className="absolute inset-0 select-none pointer-events-none w-full h-full object-cover"
           style={{
             transform: `translate(${x}px, ${y}px) rotate(${rotate}deg) scale(${scale})`,
             transformOrigin: 'center center'
@@ -295,6 +291,17 @@ export function DesignCanvas({
   const layout = useMemo(() => {
     const isSpecialWord = (name.includes('mom') || name.includes('dad') || name.includes('love') || name.includes('mother') || name.includes('father'));
 
+    // Special Layout for 'LOVE' - 4 Photo Slots in a 2x4 checkerboard grid
+    // Row 1: [L] [Photo 0] [V] [Photo 1] | Row 2: [Photo 2] [O] [Photo 3] [E]
+    if (name.includes('love')) {
+      return [
+        { x: 26, y: 1, w: 23, h: 48 },  // Row 1, Col 2 (Photo 0)
+        { x: 76, y: 1, w: 23, h: 48 },  // Row 1, Col 4 (Photo 1)
+        { x: 1, y: 51, w: 23, h: 48 },  // Row 2, Col 1 (Photo 2)
+        { x: 51, y: 51, w: 23, h: 48 }, // Row 2, Col 3 (Photo 3)
+      ];
+    }
+
     if (isSpecialWord) {
       return [
         { x: 52, y: 5, w: 45, h: 30 }, // Top Right
@@ -309,9 +316,9 @@ export function DesignCanvas({
       return [{ x: 0, y: 0, w: 100, h: 100 }];
     }
 
-    // Generic Grid
+    // Generic Grid - Improved for better spacing
     return Array.from({ length: Math.max(slots, 1) }).map((_, i) => ({
-      x: (i % 2) * 50 + 5, y: Math.floor(i / 2) * 25 + 5, w: 40, h: 20
+      x: (i % 2) * 50 + 2, y: Math.floor(i / 2) * (100 / Math.ceil(slots / 2)) + 2, w: 46, h: (100 / Math.ceil(slots / 2)) - 4
     }));
   }, [slots, isHeart, isLetter, isLamp, isClock, name]);
 
@@ -361,7 +368,7 @@ export function DesignCanvas({
           <div className="absolute inset-0 flex items-center justify-center z-18 transition-all duration-700">
             <Base64Image
               url={resolveMedia(design.previewImage, apiUrl)}
-              className={`w-full h-full object-cover animate-in fade-in zoom-in-90 duration-500 ${!isCapturing ? 'mix-blend-multiply' : ''}`}
+              className={`w-full h-full object-fill animate-in fade-in zoom-in-90 duration-500 ${!isCapturing ? 'mix-blend-multiply' : ''}`}
               alt="Template Design"
             />
           </div>
