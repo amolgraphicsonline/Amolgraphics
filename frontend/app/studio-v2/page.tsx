@@ -596,8 +596,12 @@ export default function StudioV2Page() {
   const handleAddToCart = async () => {
     if (isCapturing) return;
     if (!selectedSize) {
-      setActiveGalleryOverlay('size');
-      alert("Please select a final Frame Size before adding to cart.");
+      if (sizeOptions.length > 0) {
+        setActiveGalleryOverlay('size');
+        alert(`Please select an ${categoryParam === 'photo-album' ? 'Album' : 'Frame'} Size before adding to cart.`);
+      } else {
+        alert("Configuration Error: No sizes found. Please select a theme first.");
+      }
       return;
     }
     if (categoryParam !== 'photo-album' && !selectedShape) return alert("Please select a theme/shape.");
@@ -1369,6 +1373,10 @@ export default function StudioV2Page() {
                         <aside className="w-16 bg-white border-r border-slate-50 flex flex-col items-center py-6 gap-8 text-slate-400 z-50">
                           <button className="flex flex-col items-center gap-1 hover:text-[#1877F2] group"><Search size={20} className="group-hover:scale-110 transition-transform" /> <span className="text-[7px] font-black uppercase tracking-widest">Search</span></button>
                           <button onClick={() => { setActiveTab(activeTab === 'layouts' ? null : 'layouts'); }} className={`flex flex-col items-center gap-1 hover:text-[#1877F2] group ${activeTab === 'layouts' ? 'text-[#1877F2]' : ''}`}><LayoutGrid size={20} className="group-hover:scale-110 transition-transform" /> <span className="text-[7px] font-black uppercase tracking-widest">Layout</span></button>
+                          <button onClick={() => { setActiveGalleryOverlay('size'); }} className={`flex flex-col items-center gap-1 hover:text-[#1877F2] group`}>
+                            <Maximize2 size={20} className="group-hover:scale-110 transition-transform" /> 
+                            <span className="text-[7px] font-black uppercase tracking-widest">Size</span>
+                          </button>
                           <button onClick={() => { setActiveTab(activeTab === 'images' ? null : 'images'); }} className={`flex flex-col items-center gap-1 hover:text-[#1877F2] group ${activeTab === 'images' ? 'text-[#1877F2]' : ''}`}><ImageIcon size={20} className="group-hover:scale-110 transition-transform" /> <span className="text-[7px] font-black uppercase tracking-widest">Photos</span></button>
                           <button onClick={() => { setActiveTab(activeTab === 'text' ? null : 'text'); }} className={`flex flex-col items-center gap-1 hover:text-[#1877F2] group ${activeTab === 'text' ? 'text-[#1877F2]' : ''}`}><Type size={20} className="group-hover:scale-110 transition-transform" /> <span className="text-[7px] font-black uppercase tracking-widest">Text</span></button>
                           <button onClick={() => { setActiveTab(activeTab === 'theme' ? null : 'theme'); }} className={`flex flex-col items-center gap-1 hover:text-[#1877F2] group ${activeTab === 'theme' ? 'text-[#1877F2]' : ''}`}><Palette size={20} className="group-hover:scale-110 transition-transform" /> <span className="text-[7px] font-black uppercase tracking-widest">Theme</span></button>
