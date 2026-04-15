@@ -132,8 +132,9 @@ export default function StudioV2Page() {
 
   useEffect(() => {
     fetch(`${API_URL}/settings`)
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
+        if (!data) return;
         const s = data.data ? { id: data.data.id, ...data.data.attributes } : data;
         setGlobalSettings(s);
       })
@@ -169,7 +170,7 @@ export default function StudioV2Page() {
 
   useEffect(() => {
     fetch(`${API_URL}/categories`)
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : [])
       .then(data => setCategories(Array.isArray(data) ? data : []))
       .catch(console.error);
   }, [API_URL]);
@@ -177,7 +178,7 @@ export default function StudioV2Page() {
   useEffect(() => {
     if (!categoryParam) return;
     fetch(`${API_URL}/categories?slug=${categoryParam}`)
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : null)
       .then(cats => {
         const cat = Array.isArray(cats) ? cats.find((c: any) => c.slug === categoryParam) : cats;
         if (!cat) return;
@@ -225,8 +226,9 @@ export default function StudioV2Page() {
   useEffect(() => {
     if (!activeProductId) return;
     fetch(`${API_URL}/products/${activeProductId}`)
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
+        if (!data) return;
         // Handle Strapi-style wrapping
         const product = data.data ? { id: data.data.id, ...data.data.attributes } : data;
         setActiveProductData(product);
@@ -436,7 +438,7 @@ export default function StudioV2Page() {
     if (!categoryParam) return;
     setLoading(true);
     fetch(`${API_URL}/product-designs?category=${categoryParam}${selectedShape ? `&shape=${selectedShape}` : ''}`)
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : [])
       .then(data => {
         const designsList = Array.isArray(data) ? data : [];
         setDesigns(designsList);
@@ -446,7 +448,7 @@ export default function StudioV2Page() {
         if (!target && designIdParam) {
           // Fallback fetch: If the design isn't cleanly matching the exact API category/shape filter locally, fetch it globally!
           fetch(`${API_URL}/product-designs/${designIdParam}`)
-            .then(rt => rt.json())
+            .then(rt => rt.ok ? rt.json() : null)
             .then(dt => {
               if (dt && dt.id) {
                 setDesigns(prev => {
@@ -484,8 +486,8 @@ export default function StudioV2Page() {
 
   useEffect(() => {
     fetch(`${API_URL}/reviews`)
-      .then(res => res.json())
-      .then(data => setReviewsData(data))
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setReviewsData(data); })
       .catch(err => console.error("Error fetching reviews:", err));
   }, [API_URL]);
 
