@@ -1596,7 +1596,7 @@ export default function StudioV2Page() {
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center justify-center">
                                     <button className="text-white text-[8px] uppercase font-black tracking-widest bg-white/20 backdrop-blur px-4 py-2 rounded-full border border-white/30">Select Photo</button>
                                     <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
-                                      if (e.target.files?.[0]) handlePhotoUpload(currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2, e.target.files[0]);
+                                      if (e.target.files?.[0]) handlePhotoUpload((currentSpreadIndex - 1) * 2 + 1, e.target.files[0]);
                                     }} />
                                   </div>
                                 </div>
