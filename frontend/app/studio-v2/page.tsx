@@ -1476,6 +1476,7 @@ export default function StudioV2Page() {
 
                               {/* Left Side */}
                               <div className="flex-1 border-r border-slate-100/50 p-6 relative">
+                                  {currentSpreadIndex === 0 && <div className="absolute top-4 left-4 z-20 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded">Back Cover</div>}
                                 <div className="w-full h-full bg-white flex flex-col items-center justify-center group/page overflow-hidden">
                                   {currentSpreadIndex === 0 ? (
                                     <div className="w-full h-full flex flex-col items-center justify-between py-12 px-8 select-none">
@@ -1494,9 +1495,9 @@ export default function StudioV2Page() {
                                         </p>
                                       </div>
                                     </div>
-                                  ) : uploadedPhotos[currentSpreadIndex * 2] ? (
+                                  ) : uploadedPhotos[currentSpreadIndex * 2 - 1] ? (
                                     <Slot 
-                                      idx={currentSpreadIndex * 2}
+                                      idx={currentSpreadIndex * 2 - 1}
                                       photos={uploadedPhotos}
                                       isFinal={!isEditMode}
                                       apiUrl={API_URL}
@@ -1509,10 +1510,11 @@ export default function StudioV2Page() {
 
                               {/* Right Side */}
                               <div className="flex-1 p-6 relative">
+                                  {currentSpreadIndex === 0 && <div className="absolute top-4 right-4 z-20 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded">Front Cover</div>}
                                 <div className="w-full h-full bg-slate-50/50 rounded-xs flex flex-col items-center justify-center group/page overflow-hidden border border-slate-50">
-                                  {uploadedPhotos[currentSpreadIndex * 2 + 1] ? (
+                                  {uploadedPhotos[currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2] ? (
                                     <Slot 
-                                      idx={currentSpreadIndex * 2 + 1}
+                                      idx={currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2}
                                       photos={uploadedPhotos}
                                       isFinal={!isEditMode}
                                       apiUrl={API_URL}
@@ -1542,7 +1544,7 @@ export default function StudioV2Page() {
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center justify-center">
                                     <button className="text-white text-[8px] uppercase font-black tracking-widest bg-white/20 backdrop-blur px-4 py-2 rounded-full border border-white/30">Select Photo</button>
                                     <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
-                                      if (e.target.files?.[0]) handlePhotoUpload(currentSpreadIndex * 2 + 1, e.target.files[0]);
+                                      if (e.target.files?.[0]) handlePhotoUpload(currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2, e.target.files[0]);
                                     }} />
                                   </div>
                                 </div>
@@ -1577,10 +1579,10 @@ export default function StudioV2Page() {
                                     ${currentSpreadIndex === idx ? 'border-[#1877F2] scale-105 shadow-md' : 'border-white hover:border-slate-200'}`}
                                   >
                                     <div className="flex-1 bg-slate-100 border-r border-white/50 overflow-hidden relative">
-                                      {idx === 0 ? <div className="absolute inset-0 bg-slate-200 flex items-center justify-center"><Book size={12} className="text-slate-400 opacity-30" /></div> : uploadedPhotos[idx * 2] && <img src={resolveMedia(uploadedPhotos[idx * 2].url, API_URL)} className="w-full h-full object-cover" />}
+                                      {idx === 0 ? <div className="absolute inset-0 bg-slate-200 flex items-center justify-center"><Book size={12} className="text-slate-400 opacity-30" /></div> : uploadedPhotos[idx * 2 - 1] && <img src={resolveMedia(uploadedPhotos[idx * 2 - 1].url, API_URL)} className="w-full h-full object-cover" />}
                                     </div>
                                     <div className="flex-1 bg-slate-100 overflow-hidden relative">
-                                      {uploadedPhotos[idx * 2 + 1] && <img src={resolveMedia(uploadedPhotos[idx * 2 + 1].url, API_URL)} className="w-full h-full object-cover" />}
+                                      {uploadedPhotos[idx === 0 ? 0 : idx * 2] && <img src={resolveMedia(uploadedPhotos[idx === 0 ? 0 : idx * 2].url, API_URL)} className="w-full h-full object-cover" />}
                                     </div>
                                   </button>
                                   <span className={`text-[7px] font-black uppercase tracking-widest mt-1.5 ${currentSpreadIndex === idx ? 'text-[#1877F2]' : 'text-slate-300'}`}>{idx === 0 ? 'Cover' : `${idx * 2 - 1}-${idx * 2}`}</span>
