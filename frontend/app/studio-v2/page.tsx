@@ -122,6 +122,7 @@ export default function StudioV2Page() {
   }, [categoryParam, selectedShape]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [zoom, setZoom] = useState<number>(1);
   const [designFilter, setDesignFilter] = useState<'all' | 'popular'>('all');
   const [categoryBanner, setCategoryBanner] = useState<string | null>(null);
@@ -1353,9 +1354,9 @@ export default function StudioV2Page() {
                               <Printer size={18} />
                               <span className="text-[7px] font-black uppercase tracking-widest">Save</span>
                             </button>
-                            <button className="flex flex-col items-center gap-0.5 text-[#FF6B35]">
+                            <button onClick={() => setIsEditMode(!isEditMode)} className={`flex flex-col items-center gap-1 transition-all ${isEditMode ? "text-blue-500 scale-110" : "text-[#FF6B35]"}`}>
                               <LucideEdit size={18} />
-                              <span className="text-[7px] font-black uppercase tracking-widest">Edit</span>
+                              <span className="text-[7px] font-black uppercase tracking-widest">{isEditMode ? "DONE" : "Edit"}</span>
                             </button>
                             <button
                               onClick={handleAddToCart}
@@ -1463,6 +1464,13 @@ export default function StudioV2Page() {
                               <span className={currentSpreadIndex === 0 ? 'text-[#1877F2]' : ''}>{currentSpreadIndex === 0 ? 'Front cover' : `Page ${currentSpreadIndex * 2}`}</span>
                             </div>
 
+                            {/* Edit Mode Hint */}
+                            {isEditMode && (
+                              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] bg-[#1877F2] text-white text-[10px] font-black uppercase tracking-widest px-6 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-bounce">
+                                <Move size={14} /> Drag image to adjust position | Scroll to Zoom
+                              </div>
+                            )}
+
                             <div className="w-full h-full bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.15)] rounded-sm flex relative border border-slate-200/60 overflow-hidden group/spread hover:shadow-[0_60px_150px_-30px_rgba(0,0,0,0.2)] transition-all duration-700">
                               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-4 bg-gradient-to-r from-black/[0.03] via-black/[0.1] to-black/[0.03] z-10" />
 
@@ -1487,7 +1495,14 @@ export default function StudioV2Page() {
                                       </div>
                                     </div>
                                   ) : uploadedPhotos[currentSpreadIndex * 2] ? (
-                                    <img src={resolveMedia(uploadedPhotos[currentSpreadIndex * 2].url, API_URL)} className="w-full h-full object-cover transition-transform duration-700 group-hover/page:scale-105" />
+                                    <Slot 
+                                      idx={currentSpreadIndex * 2}
+                                      photos={uploadedPhotos}
+                                      isFinal={!isEditMode}
+                                      apiUrl={API_URL}
+                                      onUpload={handlePhotoUpload}
+                                      onAdjust={(idx, photo) => setUploadedPhotos(prev => ({ ...prev, [idx]: photo }))}
+                                    />
                                   ) : <ImageIcon size={32} className="text-slate-100" />}
                                 </div>
                               </div>
@@ -1496,7 +1511,14 @@ export default function StudioV2Page() {
                               <div className="flex-1 p-6 relative">
                                 <div className="w-full h-full bg-slate-50/50 rounded-xs flex flex-col items-center justify-center group/page overflow-hidden border border-slate-50">
                                   {uploadedPhotos[currentSpreadIndex * 2 + 1] ? (
-                                    <img src={resolveMedia(uploadedPhotos[currentSpreadIndex * 2 + 1].url, API_URL)} className="w-full h-full object-cover transition-transform duration-700 group-hover/page:scale-105" />
+                                    <Slot 
+                                      idx={currentSpreadIndex * 2 + 1}
+                                      photos={uploadedPhotos}
+                                      isFinal={!isEditMode}
+                                      apiUrl={API_URL}
+                                      onUpload={handlePhotoUpload}
+                                      onAdjust={(idx, photo) => setUploadedPhotos(prev => ({ ...prev, [idx]: photo }))}
+                                    />
                                   ) : (
                                     <div className="w-full h-full relative group/design">
                                        {currentSpreadIndex === 0 && selectedDesign?.previewImage && (
