@@ -28,25 +28,25 @@ export const CategoryBanner = ({
       setLoading(true);
       setError(false);
       try {
-        const url = categoryId
-          ? `${API_URL}/banners/category/${categoryId}`
-          : `${API_URL}/banners?isDefault=true`; // Fallback to a default if implemented or just active banners
-        const res = await fetch(url, { cache: 'no-store' });
-        const data = await res.json();
-
-        if (res.ok && data && data.id) {
-          setBanner(data);
-        } else if (!categoryId) {
-          // Fallback to first active banner ONLY if we're not looking for a specific category
-          const allRes = await fetch(`${API_URL}/banners`, { cache: 'no-store' });
-          const allData = await allRes.json();
-          if (Array.isArray(allData) && allData.length > 0) {
-            setBanner(allData[0]);
-          } else {
-            setBanner(null);
+        const res = await fetch(`${API_URL}/banners/all`, { cache: 'no-store' });
+        const allBanners = await res.json();
+        
+        if (Array.isArray(allBanners)) {
+          let matched = null;
+          
+          if (categoryId) {
+            // Find active banner explicitly mapped to this category
+            matched = allBanners.find((b: any) => b.categoryId === categoryId && b.isActive);
           }
+          
+          if (!matched) {
+            // Fallback: strictly global banners (no category assigned) OR just the first active one
+            matched = allBanners.find((b: any) => (!b.categoryId || b.categoryId === "") && b.isActive) 
+                   || allBanners.find((b: any) => b.isActive);
+          }
+
+          setBanner(matched || null);
         } else {
-          // If category banner is missing, don't show a random one
           setBanner(null);
         }
       } catch {
@@ -59,7 +59,7 @@ export const CategoryBanner = ({
   }, [categoryId, API_URL]);
 
   if (loading) return (
-    <div className="w-full aspect-[21/9] md:aspect-[3/1] bg-slate-100 animate-pulse flex items-center justify-center rounded-3xl overflow-hidden mb-8">
+    <div className="w-full h-[180px] md:h-[240px] bg-slate-100 animate-pulse flex items-center justify-center rounded-2xl overflow-hidden mb-8">
       <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
     </div>
   );
@@ -73,9 +73,9 @@ export const CategoryBanner = ({
   };
 
   return (
-    <section className="relative w-full aspect-[21/9] md:aspect-[3.5/1] bg-slate-900 rounded-xl overflow-hidden group mb-10 shadow-2xl">
+    <section className="relative w-full h-[180px] md:h-[240px] bg-slate-900 rounded-2xl overflow-hidden group md:mb-10 mb-6 shadow-xl border border-slate-100">
       {/* Background Image with Parallax-like effect */}
-      <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
+      <div className="absolute inset-0 transition-transform duration-700 md:group-hover:scale-105">
         <img
           src={resolveMedia(banner.imageUrl)}
           alt={banner.title}

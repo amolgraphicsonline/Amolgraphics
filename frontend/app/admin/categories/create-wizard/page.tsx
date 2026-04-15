@@ -13,6 +13,7 @@ import {
 type ShapeConfig = {
   id: string;
   name: string;
+  image?: string;
   sizes: string[]; 
 };
 
@@ -31,7 +32,7 @@ export default function CategoryWizardPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorDetails, setErrorDetails] = useState<{ type: 'FRONTEND' | 'DATABASE' | 'CONNECTIVITY', message: string } | null>(null);
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
   // --- Step 1: Basics ---
   const [name, setName] = useState("");
@@ -64,8 +65,12 @@ export default function CategoryWizardPage() {
   const addShape = (sn?: string) => {
     const sName = sn || newShapeName;
     if (!sName || shapes.find(s => s.name.toLowerCase() === sName.toLowerCase())) return;
-    setShapes([...shapes, { id: Math.random().toString(36).substr(2, 9), name: sName, sizes: [] }]);
+    setShapes([...shapes, { id: Math.random().toString(36).substr(2, 9), name: sName, image: "", sizes: [] }]);
     setNewShapeName("");
+  };
+
+  const updateShapeImage = (id: string, url: string) => {
+    setShapes(shapes.map(s => s.id === id ? { ...s, image: url } : s));
   };
 
   const removeShape = (id: string) => setShapes(shapes.filter(s => s.id !== id));
@@ -112,6 +117,8 @@ export default function CategoryWizardPage() {
 
   // --- Step 5: Variants ---
   const [variants, setVariants] = useState<any[]>([]);
+  const [basePrice, setBasePrice] = useState("1");
+
   useEffect(() => {
     if (step === 5) {
       const generated: any[] = [];
@@ -124,14 +131,21 @@ export default function CategoryWizardPage() {
               const dimensions = sz.toLowerCase().split('x');
               const w = parseInt(dimensions[0]) || 0;
               const h = parseInt(dimensions[1]) || 0;
+              
+              // Normalize dimension string based on shape for SKU and mapping
+              let finalSizeStr = sz;
+              if (sh.name.toLowerCase().includes('landscape') && w < h) finalSizeStr = `${h}X${w}`;
+              else if (sh.name.toLowerCase().includes('portrait') && w > h) finalSizeStr = `${h}X${w}`;
+
               generated.push({
                 shape: sh.name,
-                size: sz,
+                size: finalSizeStr,
                 thickness: th,
                 mounting: mt,
                 width: w,
                 height: h,
-                sku: `${name.substring(0,3).toUpperCase()}-${sh.name.substring(0,1).toUpperCase()}-${sz.replace(/[^0-9]/g,'')}-${th.replace(/[^0-9]/g,'')}MM-${mt.substring(0,2).toUpperCase()}`
+                price: basePrice || "1",
+                sku: `${name.substring(0,3).toUpperCase()}-${sh.name.substring(0,1).toUpperCase()}-${finalSizeStr.replace(/[^0-9]/g,'')}-${th.replace(/[^0-9]/g,'')}MM-${mt.substring(0,2).toUpperCase()}`
               });
             });
           });
@@ -139,7 +153,11 @@ export default function CategoryWizardPage() {
       });
       setVariants(generated);
     }
-  }, [step, shapes, thicknesses, mountings, specMapping, name]);
+  }, [step, shapes, thicknesses, mountings, specMapping, name, basePrice]);
+
+  const updateVariantPrice = (index: number, price: string) => {
+    setVariants(prev => prev.map((v, i) => i === index ? { ...v, price } : v));
+  };
 
   const handleFinalSubmit = async () => {
     if (!name) { setErrorDetails({ type: 'FRONTEND', message: "Name is required." }); return; }
@@ -165,9 +183,10 @@ export default function CategoryWizardPage() {
         });
         const attr = await res.json();
         for (const v of Array.from(new Set(values))) {
+          const shapeConfig = shapes.find(s => s.name === v);
           await fetch(`${API_URL}/categories/attributes/${attr.id}/options`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ value: v, displayValue: v, price: 0 })
+            body: JSON.stringify({ value: v, displayValue: v, price: 0, image: shapeConfig?.image || "" })
           });
         }
         return attr;
@@ -191,7 +210,7 @@ export default function CategoryWizardPage() {
         isReadyToSale: false,
         tags: "Wizard-Generated",
         variants: variants.map(v => ({
-          sku: v.sku, price: 1, stock: 100, isActive: true,
+          sku: v.sku, price: parseFloat(v.price) || 1, stock: 100, isActive: true,
           attributes: [
             { name: "Shape", value: v.shape }, { name: "Size", value: v.size },
             { name: "Thickness", value: v.thickness }, { name: "Mounting", value: v.mounting }
@@ -391,12 +410,18 @@ export default function CategoryWizardPage() {
                 <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center"><Shapes size={24} /></div>
                 <div>
                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Define Your Shapes</h2>
-                   <p className="text-slate-400 font-medium text-sm">Select shapes that will be available for this product.</p>
+                   <p className="text-slate-400 font-medium text-sm">Select the geometric orientations available for this product.</p>
                 </div>
              </div>
+
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {presetShapes.map(ps => (
-                   <button key={ps} onClick={() => addShape(ps)} disabled={shapes.some(s => s.name === ps)} className={`h-16 rounded-2xl border-2 flex items-center justify-center gap-3 font-black text-[12px] uppercase tracking-widest transition-all ${shapes.some(s => s.name === ps) ? 'bg-purple-600 text-white border-purple-600 shadow-xl' : 'bg-white text-slate-400 border-slate-100 hover:border-purple-200'}`}>
+                   <button 
+                     key={ps} 
+                     onClick={() => addShape(ps)} 
+                     disabled={shapes.some(s => s.name === ps)} 
+                     className={`h-16 rounded-2xl border-2 flex items-center justify-center gap-3 font-black text-[12px] uppercase tracking-widest transition-all ${shapes.some(s => s.name === ps) ? 'bg-purple-600 text-white border-purple-600 shadow-xl scale-[1.02]' : 'bg-white text-slate-400 border-slate-100 hover:border-purple-200 active:scale-95'}`}
+                   >
                       {ps === 'Portrait' && <Maximize size={18} className="rotate-90" />}
                       {ps === 'Landscape' && <Maximize size={18} />}
                       {ps === 'Square' && <Settings2 size={18} />}
@@ -404,19 +429,74 @@ export default function CategoryWizardPage() {
                    </button>
                 ))}
              </div>
-             <div className="bg-white rounded-[2.5rem] border border-slate-200 p-10 shadow-sm">
-                <div className="flex gap-3 mb-8">
-                   <input type="text" value={newShapeName} onChange={e => setNewShapeName(e.target.value)} onKeyPress={e => e.key === 'Enter' && addShape()} placeholder="Add custom shape (e.g. Diamond)..." className="flex-1 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:bg-white focus:border-purple-500 transition-all" />
-                   <button onClick={() => addShape()} className="px-8 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase">Add</button>
+
+             <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                   <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400">Configured Geometries ({shapes.length})</h3>
+                   <div className="flex gap-2">
+                      <input 
+                        type="text" value={newShapeName} onChange={e => setNewShapeName(e.target.value)} 
+                        onKeyPress={e => e.key === 'Enter' && addShape()} 
+                        placeholder="Add custom shape..." 
+                        className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs outline-none focus:bg-white focus:border-purple-500" 
+                      />
+                      <button onClick={() => addShape()} className="px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase">Add</button>
+                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                   {shapes.map(s => (
-                      <div key={s.id} className="inline-flex items-center gap-3 px-5 py-3 bg-slate-900 text-white rounded-full group">
-                         <span className="font-black text-[11px] uppercase tracking-widest">{s.name}</span>
-                         <button onClick={() => removeShape(s.id)} className="text-slate-500 hover:text-white transition-colors"><X size={14} /></button>
-                      </div>
-                   ))}
-                </div>
+
+                {shapes.length === 0 ? (
+                  <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-3xl">
+                     <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mb-4"><Plus size={32} /></div>
+                     <p className="text-slate-400 font-bold text-sm">No shapes selected yet.</p>
+                     <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mt-1">Select a preset above to begin</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {shapes.map(s => (
+                       <div key={s.id} className="group bg-white border border-slate-100 rounded-3xl p-5 shadow-sm hover:border-purple-200 hover:shadow-xl hover:shadow-purple-50 transition-all duration-300">
+                          <div className="flex items-center justify-between mb-6">
+                             <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-[9px] uppercase shadow-lg shadow-slate-200">{s.name.substring(0,2)}</div>
+                                <span className="font-black text-[12px] uppercase tracking-widest text-slate-900">{s.name}</span>
+                             </div>
+                             <button onClick={() => removeShape(s.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><X size={16} /></button>
+                          </div>
+                          
+                          <label className={`relative group cursor-pointer block h-32 rounded-2xl overflow-hidden transition-all ${s.image ? 'bg-white border border-slate-100' : 'bg-slate-50 border-2 border-dashed border-slate-200 hover:border-purple-300 hover:bg-white'}`}>
+                             <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const formData = new FormData();
+                                formData.append("image", file);
+                                setUploading(true);
+                                try {
+                                  const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
+                                  const data = await res.json();
+                                  if (data.url) updateShapeImage(s.id, data.url);
+                                } catch (e) {
+                                  console.error("Upload failed", e);
+                                } finally {
+                                  setUploading(false);
+                                }
+                             }} />
+                             {s.image ? (
+                                <div className="relative w-full h-full p-2">
+                                  <img src={s.image.startsWith('/') ? `${API_URL?.replace('/api','')}${s.image}` : s.image} className="w-full h-full object-contain" />
+                                  <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-[9px] font-black text-white uppercase tracking-widest bg-white/20 backdrop-blur px-3 py-1.5 rounded-full">Change Mockup</span>
+                                  </div>
+                                </div>
+                             ) : (
+                                <div className="h-full flex flex-col items-center justify-center gap-2">
+                                   <div className="p-2 bg-white rounded-xl shadow-sm text-slate-300 group-hover:text-purple-500 transition-colors"><Maximize size={20} /></div>
+                                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upload Vizualizer</span>
+                                </div>
+                             )}
+                          </label>
+                       </div>
+                    ))}
+                  </div>
+                )}
              </div>
           </div>
         )}
@@ -540,11 +620,20 @@ export default function CategoryWizardPage() {
 
         {step === 5 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-             <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center"><CheckCircle2 size={24} /></div>
-                <div>
-                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Review Variant Matrix</h2>
-                   <p className="text-slate-400 font-medium text-sm">Validating {variants.length} generated combinations.</p>
+             <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center"><CheckCircle2 size={24} /></div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Review Variant Matrix</h2>
+                    <p className="text-slate-400 font-medium text-sm">Validating {variants.length} generated combinations.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                   <label className="text-[10px] font-black uppercase text-slate-400">Bulk Price (₹)</label>
+                   <input 
+                      type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)}
+                      className="w-24 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl font-black text-blue-600 text-sm outline-none"
+                   />
                 </div>
              </div>
              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
@@ -554,6 +643,7 @@ export default function CategoryWizardPage() {
                          <th className="px-6 py-4 font-black text-[10px] text-slate-500 uppercase tracking-widest">Shape</th>
                          <th className="px-6 py-4 font-black text-[10px] text-slate-500 uppercase tracking-widest">Size</th>
                          <th className="px-6 py-4 font-black text-[10px] text-slate-500 uppercase tracking-widest">Specs</th>
+                         <th className="px-6 py-4 font-black text-[10px] text-slate-500 uppercase tracking-widest">Price (₹)</th>
                          <th className="px-6 py-4 font-black text-[10px] text-slate-500 uppercase tracking-widest text-right">SKU</th>
                       </tr>
                    </thead>
@@ -568,6 +658,12 @@ export default function CategoryWizardPage() {
                                   <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase">{v.mounting?.split(' ')[0]}</span>
                                </div>
                             </td>
+                            <td className="px-6 py-4">
+                               <input 
+                                 type="number" value={v.price} onChange={e => updateVariantPrice(i, e.target.value)}
+                                 className="w-20 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs font-black text-blue-600 outline-none focus:bg-white focus:border-blue-500"
+                               />
+                            </td>
                             <td className="px-6 py-4 text-right">
                                <span className="font-mono text-[9px] font-bold text-slate-400">{v.sku}</span>
                             </td>
@@ -575,7 +671,7 @@ export default function CategoryWizardPage() {
                       ))}
                       {variants.length > 50 && (
                         <tr>
-                           <td colSpan={4} className="px-6 py-4 text-center bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                           <td colSpan={5} className="px-6 py-4 text-center bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                              ... and {variants.length - 50} more variations
                            </td>
                         </tr>

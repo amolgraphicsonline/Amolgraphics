@@ -44,6 +44,18 @@ const SHAPES = [
   { value: "grid",      label: "Grid (4 Photo)" },
 ];
 
+const ALBUM_THEMES = [
+  { value: "birthday", label: "Birthday" },
+  { value: "international-travel", label: "International Travel" },
+  { value: "life-events", label: "Life Events" },
+  { value: "national-travel", label: "National Travel" },
+  { value: "you-and-me", label: "You & Me" },
+  { value: "general", label: "General" },
+  { value: "family", label: "Family" },
+  { value: "kids-and-babies", label: "Kids & Babies" },
+  { value: "wedding", label: "Wedding" },
+];
+
 export default function AdminDesignsPage() {
   const router = useRouter();
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -278,16 +290,23 @@ export default function AdminDesignsPage() {
                 </div>
                 <div className="col-span-2 space-y-1.5">
                   <label className="text-[12px]  text-slate-400 capitalize tracking-widest">Category</label>
-                  <select value={metaForm.category} onChange={e => setMetaForm((f: any) => ({ ...f, category: e.target.value }))}
+                  <select value={metaForm.category} onChange={e => {
+                    const newCat = e.target.value;
+                    setMetaForm((f: any) => ({ 
+                      ...f, 
+                      category: newCat,
+                      shape: newCat === 'photo-album' ? 'birthday' : 'portrait'
+                    }));
+                  }}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-500 transition-all text-base">
                     {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[12px]  text-slate-400 capitalize tracking-widest">Shape</label>
+                  <label className="text-[12px]  text-slate-400 capitalize tracking-widest">{metaForm.category === 'photo-album' ? 'Album Theme' : 'Shape Compatibility'}</label>
                   <select value={metaForm.shape} onChange={e => setMetaForm((f: any) => ({ ...f, shape: e.target.value }))}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-500 transition-all text-base">
-                    {SHAPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    {(metaForm.category === 'photo-album' ? ALBUM_THEMES : SHAPES).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -452,7 +471,14 @@ export default function AdminDesignsPage() {
                 <label className="text-base  text-slate-500 capitalize tracking-widest">Category</label>
                 <select
                   value={form.category}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  onChange={e => {
+                    const newCat = e.target.value;
+                    setForm(f => ({ 
+                      ...f, 
+                      category: newCat,
+                      shape: newCat === 'photo-album' ? 'birthday' : 'portrait'
+                    }));
+                  }}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-500 transition-all"
                 >
                   {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
@@ -479,15 +505,15 @@ export default function AdminDesignsPage() {
                 />
               </div>
 
-              {/* Shape Selection */}
+              {/* Shape / Theme Selection */}
               <div className="space-y-2">
-                <label className="text-base  text-slate-500 capitalize tracking-widest">Shape Compatibility</label>
+                <label className="text-base  text-slate-500 capitalize tracking-widest">{form.category === 'photo-album' ? 'Album Theme' : 'Shape Compatibility'}</label>
                 <select
-                  value={form.shape || "portrait"}
+                  value={form.shape || (form.category === 'photo-album' ? 'birthday' : 'portrait')}
                   onChange={e => setForm(f => ({ ...f, shape: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-blue-500 transition-all"
                 >
-                  {SHAPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  {(form.category === 'photo-album' ? ALBUM_THEMES : SHAPES).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
 

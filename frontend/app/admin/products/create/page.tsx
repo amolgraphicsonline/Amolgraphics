@@ -14,6 +14,16 @@ import MediaPicker from "@/components/MediaPicker";
 // Types
 type ProductType = "SIMPLE" | "VARIABLE";
 type ProductStatus = "DRAFT" | "TESTING" | "PUBLISHED" | "PRIVATE";
+ 
+ interface Category {
+   id: string;
+   name: string;
+ }
+ 
+ interface Brand {
+   id: string;
+   name: string;
+ }
 
 interface Variation {
   id?: string;
@@ -61,6 +71,8 @@ export default function CreateProductPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
+  const [isMatrixVisible, setIsMatrixVisible] = useState(false);
+  const [bulkPrice, setBulkPrice] = useState("");
   const [success, setSuccess] = useState("");
 
   // Product Basic Info
@@ -95,12 +107,12 @@ export default function CreateProductPage() {
   const [pickerOpen, setPickerOpen] = useState<PickerTarget>(null);
 
   // Categories & Brands
-  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [allBrands, setAllBrands] = useState<any[]>([]);
+  const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState("");
   const [tags, setTags] = useState("");
-  const [categoryAttributes, setCategoryAttributes] = useState<any[]>([]);
+  const [categoryAttributes, setCategoryAttributes] = useState<Attribute[]>([]);
 
 
   // Section Data
@@ -150,11 +162,12 @@ export default function CreateProductPage() {
       .then(res => res.json())
       .then(data => {
         if (data.categoryAttributes) {
-           const inherited = data.categoryAttributes.map((ca: any) => ({
+           const inherited: Attribute[] = data.categoryAttributes.map((ca: { name: string; type?: "SELECT" | "SWATCH"; attributeOptions?: { value: string }[] }) => ({
               name: ca.name,
               type: ca.type,
-              values: ca.attributeOptions?.map((o: any) => o.value) || [],
-              usedForVariations: true
+              values: ca.attributeOptions?.map(o => o.value) || [],
+              usedForVariations: true,
+              visible: true
            }));
            setCategoryAttributes(inherited);
         }
@@ -169,9 +182,10 @@ export default function CreateProductPage() {
   }, [categoryAttributes, attributes, productType]);
 
   const generateVariations = (isManual = true) => {
+    setIsMatrixVisible(true);
     const activeAttrs = [
-      ...categoryAttributes.filter(a => a.usedForVariations && a.values.some((v: string) => v.trim() !== "")),
-      ...attributes.filter(a => a.usedForVariations && a.values.some((v: string) => v.trim() !== ""))
+      ...categoryAttributes.filter(a => a.usedForVariations && a.values.some(v => v.trim() !== "")),
+      ...attributes.filter(a => a.usedForVariations && a.values.some(v => v.trim() !== ""))
     ];
     if (activeAttrs.length === 0) {
       if (isManual && categoryAttributes.length === 0) {
@@ -180,16 +194,57 @@ export default function CreateProductPage() {
       return;
     }
 
-    const combinations = activeAttrs.reduce((acc, attr) => {
+    const combinations = activeAttrs.reduce((acc: Record<string, string>[], attr) => {
       const field = attr.name;
-      const values = attr.values.filter((v: string) => v.trim() !== "");
-      if (acc.length === 0) return values.map((v: any) => ({ [field]: v }));
-      return acc.flatMap((combo: any) => values.map((v: any) => ({ ...combo, [field]: v })));
-    }, [] as any[]);
+      const values = attr.values.filter(v => v.trim() !== "");
+      if (acc.length === 0) return values.map(v => ({ [field]: v }));
+      return acc.flatMap(combo => values.map(v => ({ ...combo, [field]: v })));
+    }, [] as Record<string, string>[]);
 
-    setVariations(combinations.map((combo: any) => {
-      const comboPath = Object.values(combo).join('-').toUpperCase();
-      const generatedSku = inventory.sku ? `${inventory.sku}-${comboPath}` : comboPath;
+    setVariations(combinations.map(combo => {
+      // Normalize Size if Shape is present
+      const normalizedCombo = { ...combo };
+      const shapeAttr = Object.keys(combo).find(k => k.toLowerCase() === 'shape' || k.toLowerCase() === 'orientation');
+      const sizeAttr = Object.keys(combo).find(k => k.toLowerCase() === 'size');
+      
+      if (shapeAttr && sizeAttr && normalizedCombo[sizeAttr].includes('X')) {
+        const dims = normalizedCombo[sizeAttr].split('X');
+        if (dims.length === 2) {
+          const w = parseInt(dims[0]);
+          const h = parseInt(dims[1]);
+          if (!isNaN(w) && !isNaN(h)) {
+             const shapeVal = normalizedCombo[shapeAttr].toLowerCase();
+             if (shapeVal.includes('landscape') && w < h) {
+                normalizedCombo[sizeAttr] = `${h}X${w}`;
+             } else if (shapeVal.includes('portrait') && w > h) {
+                normalizedCombo[sizeAttr] = `${h}X${w}`;
+             }
+          }
+        }
+      }
+
+      // 3. Build Deterministic SKU
+      // Order: Shape -> Size -> Thickness -> Mounting (But only for active ones)
+      const skuSegments: string[] = [];
+      
+      const findVal = (name: string) => {
+        const key = Object.keys(normalizedCombo).find(k => k.toLowerCase() === name.toLowerCase());
+        return key ? normalizedCombo[key] : null;
+      };
+
+      const shapeVal = findVal('Shape');
+      const sizeVal = findVal('Size');
+      const thickVal = findVal('Thickness');
+      const mountVal = findVal('Mounting');
+
+      if (shapeVal) skuSegments.push(shapeVal.substring(0, 3).toUpperCase());
+      if (sizeVal) skuSegments.push(sizeVal.replace(/[^0-9X]/g, '').toUpperCase());
+      if (thickVal) skuSegments.push(thickVal.replace(/[^0-9]/g, '') + 'MM');
+      if (mountVal) skuSegments.push(mountVal.split(' ')[0].substring(0, 2).toUpperCase());
+
+      const comboPath = skuSegments.join('-');
+      const generatedSku = inventory.sku ? `${inventory.sku}-${comboPath}`.toUpperCase() : comboPath.toUpperCase();
+      
       return {
         price: pricing.regularPrice,
         salePrice: pricing.salePrice,
@@ -204,10 +259,38 @@ export default function CreateProductPage() {
         height: shipping.height,
         isVirtual: isVirtual,
         isDownloadable: isDownloadable,
-        attributes: combo
+        attributes: normalizedCombo
       };
     }));
   };
+
+  const handleCategoryChange = async (catId: string) => {
+    setSelectedCategories([catId]);
+    if (!catId) {
+      setCategoryAttributes([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/categories/${catId}`);
+      const data = await res.json();
+      if (data.categoryAttributes) {
+        const mapped = data.categoryAttributes.map((v: any) => ({
+          name: v.name,
+          values: v.attributeOptions?.map((o: any) => o.value) || [],
+          usedForVariations: true
+        }));
+        setCategoryAttributes(mapped);
+      } else if (data.variances) {
+        setCategoryAttributes(data.variances.map((v: any) => ({
+          name: v.name,
+          values: v.values || [],
+          usedForVariations: true
+        })));
+      }
+    } catch (e) { console.error("Category Sync Error:", e); }
+  };
+
+  // We removed the auto-generation useEffect to allow manual selection before building the matrix
 
   const handleSave = async () => {
     setLoading(true);
@@ -232,7 +315,7 @@ export default function CreateProductPage() {
        if (variations.length === 0) {
          setError("Variation generation is mandatory for variable products"); setLoading(false); return;
        }
-       const invalidVar = variations.find((v: any) => !v.price || parseFloat(v.price) <= 0 || !v.stock || parseInt(v.stock?.toString()) <= 0);
+       const invalidVar = variations.find((v: Variation) => !v.price || parseFloat(v.price) <= 0 || !v.stock || parseInt(v.stock?.toString()) <= 0);
        if (invalidVar) {
          setError("All variations must have a price and a stock count greater than zero"); setLoading(false); return;
        }
@@ -261,12 +344,12 @@ export default function CreateProductPage() {
         type: a.type || "SELECT",
         options: a.values.map(v => ({ value: v }))
       })),
-      variants: variations.map((v: any) => ({
+      variants: variations.map((v: Variation) => ({
         ...v,
         price: parseFloat(v.price) || 0,
-        salePrice: parseFloat(v.salePrice) || null,
+        salePrice: v.salePrice ? parseFloat(v.salePrice) : null,
         stock: parseInt(v.stock) || 0,
-        attributes: Object.entries(v.attributes).map(([name, value]: [string, any]) => ({ name, value }))
+        attributes: Object.entries(v.attributes).map(([name, value]) => ({ name, value }))
       }))
     };
 
@@ -513,49 +596,67 @@ export default function CreateProductPage() {
                               <button onClick={() => setAttributes([...attributes, { name: "", values: [], visible: true, usedForVariations: true }])} className="text-[12px] font-medium text-blue-600 hover:text-blue-800 capitalize tracking-widest flex items-center gap-1"><Plus size={12} /> Add New Class</button>
                            </div>
                            <div className="space-y-4">
-                              {categoryAttributes.map((attr, idx) => (
-                                 <div key={`cat-${idx}`} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                                    <div>
-                                       <p className="text-[12px]  text-blue-600 capitalize mb-1 tracking-widest pl-1">Inherited Class</p>
-                                       <h5 className="text-[14px]  text-slate-900 leading-none">{attr.name}</h5>
-                                       <p className="text-[12px] font-medium text-slate-400 mt-1 capitalize tracking-tighter">Variances: {attr.values.join(' | ')}</p>
-                                    </div>
-                                    <label className="flex items-center gap-3 cursor-pointer group">
-                                       <div className={`w-10 h-6 rounded-full transition-all relative ${attr.usedForVariations ? 'bg-blue-600' : 'bg-slate-200'}`}>
-                                          <input 
-                                             type="checkbox" 
-                                             checked={attr.usedForVariations} 
-                                             onChange={e => {
-                                                const u = [...categoryAttributes];
-                                                u[idx].usedForVariations = e.target.checked;
-                                                setCategoryAttributes(u);
-                                             }} 
-                                             className="hidden" 
-                                          />
-                                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${attr.usedForVariations ? 'left-5' : 'left-1'}`} />
-                                       </div>
-                                    </label>
-                                 </div>
-                              ))}
-                              {attributes.map((attr, idx) => (
-                                 <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm flex items-center gap-6">
-                                    <input value={attr.name} onChange={e => { const u = [...attributes]; u[idx].name = e.target.value; setAttributes(u); }} placeholder="e.g. Size" className="w-40 px-4 py-2.5 bg-slate-50 border border-slate-300/60 rounded-xl focus:bg-white focus:border-blue-500 transition-all font-medium text-slate-900 text-base" />
-                                    <input value={attr.values.join(' | ')} onChange={e => { const u = [...attributes]; u[idx].values = e.target.value.split('|').map(v => v.trim()); setAttributes(u); }} placeholder="S | M | L" className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300/60 rounded-xl focus:bg-white focus:border-blue-500 transition-all font-medium text-slate-900 text-[11px] capitalize" />
-                                    <button onClick={() => setAttributes(attributes.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
-                                 </div>
-                              ))}
-                           </div>
+                               {categoryAttributes.length > 0 ? (
+                                  categoryAttributes.map((attr, idx) => (
+                                     <div key={`cat-${idx}`} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                           <div className="flex items-center gap-2 mb-1">
+                                              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[8px] font-black uppercase rounded tracking-widest">Inherited</span>
+                                              <p className="text-[12px]  text-slate-900 capitalize tracking-widest pl-1">Category Class</p>
+                                           </div>
+                                           <h5 className="text-[14px]  text-slate-900 leading-none">{attr.name}</h5>
+                                           <p className="text-[12px] font-medium text-slate-400 mt-1 capitalize tracking-tighter">Variances: {attr.values.join(' | ')}</p>
+                                        </div>
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                           <div className={`w-10 h-6 rounded-full transition-all relative ${attr.usedForVariations ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                                              <input 
+                                                 type="checkbox" 
+                                                 checked={attr.usedForVariations} 
+                                                 onChange={e => {
+                                                    const u = [...categoryAttributes];
+                                                    u[idx].usedForVariations = e.target.checked;
+                                                    setCategoryAttributes(u);
+                                                 }} 
+                                                 className="hidden" 
+                                              />
+                                              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${attr.usedForVariations ? 'left-5' : 'left-1'}`} />
+                                           </div>
+                                        </label>
+                                     </div>
+                                  ))
+                               ) : (
+                                  <div className="bg-white/50 border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center">
+                                     <p className="text-[11px] text-slate-400 uppercase tracking-widest font-black">No Category Variances Found</p>
+                                     <p className="text-[10px] text-slate-400 capitalize mt-1 italic">Use manual classes below to define product options</p>
+                                  </div>
+                               )}
+                               
+                               {attributes.map((attr, idx) => (
+                                  <div key={idx} className="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-6 relative">
+                                     <div className="absolute -top-2 left-4 px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black uppercase rounded tracking-widest shadow-sm">Manual Class</div>
+                                     <input value={attr.name} onChange={e => { const u = [...attributes]; u[idx].name = e.target.value; setAttributes(u); }} placeholder="e.g. Size" className="w-40 px-4 py-2.5 bg-slate-50 border border-slate-300/60 rounded-xl focus:bg-white focus:border-blue-500 transition-all font-medium text-slate-900 text-base" />
+                                     <input value={attr.values.join(' | ')} onChange={e => { const u = [...attributes]; u[idx].values = e.target.value.split('|').map(v => v.trim()); setAttributes(u); }} placeholder="S | M | L" className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300/60 rounded-xl focus:bg-white focus:border-blue-500 transition-all font-medium text-slate-900 text-[11px] capitalize" />
+                                     <button onClick={() => setAttributes(attributes.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                                  </div>
+                               ))}
+                            </div>
                         </div>
                         <button onClick={() => generateVariations(true)} className="w-full py-4 bg-blue-600 text-white  text-[11px] capitalize tracking-widest rounded-2xl hover:bg-blue-700 transition-all">Regenerate Combined Matrix</button>
-                        {variations.length > 0 && (
-                           <div className="border border-slate-300 rounded-3xl overflow-hidden bg-white shadow-sm">
-                              <div className="overflow-x-auto no-scrollbar">
-                                 <div className="min-w-[1000px]">
-                                    <div className="bg-blue-600 px-8 py-4 grid grid-cols-12 gap-4 items-center">
-                                       <div className="col-span-1 text-[12px]  text-blue-100 capitalize tracking-widest text-center">Identity</div>
-                                       <div className="col-span-2 text-[12px]  text-blue-100 capitalize tracking-widest">Attribute Map</div>
+                        {isMatrixVisible && variations.length > 0 && (
+                           <div className="bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-800">
+                               <div className="px-8 py-5 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between">
+                                   <div className="flex items-center gap-3">
+                                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
+                                      <h4 className="text-[13px] font-medium text-white capitalize tracking-widest leading-none">Variation Matrix <span className="opacity-50 ml-2">({variations.length} items)</span></h4>
+                                   </div>
+                                   <button onClick={() => setVariations([])} className="text-[11px]  text-rose-400 hover:text-rose-300 capitalize tracking-widest px-4 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 rounded-full transition-all">Clear Matrix</button>
+                               </div>
+                               <div className="bg-white">
+                                    <div className="px-8 py-4 bg-blue-900 border-b border-blue-800 grid grid-cols-12 gap-4 items-center shadow-inner">
+                                       <div className="col-span-1 text-[12px]  text-blue-100 capitalize tracking-widest text-center">Preview</div>
+                                       <div className="col-span-2 text-[12px]  text-blue-100 capitalize tracking-widest">Configuration Classes</div>
                                        <div className="col-span-5 text-[12px]  text-blue-100 capitalize tracking-widest">Inventory SKU</div>
-                                       <div className="col-span-2 text-[12px]  text-blue-100 capitalize tracking-widest text-center">Price (₹)</div>
+                                       <div className="col-span-2 text-[12px]  text-blue-100 capitalize tracking-widest text-center">Retail Price (₹)</div>
                                        <div className="col-span-1 text-[12px]  text-blue-100 capitalize tracking-widest text-center">Stock</div>
                                        <div className="col-span-1"></div>
                                     </div>
@@ -587,10 +688,9 @@ export default function CreateProductPage() {
                                              </div>
                                           </div>
                                        ))}
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
+                                     </div>
+                                  </div>
+                               </div>
                         )}
                      </div>
                   </Card>
@@ -678,7 +778,7 @@ export default function CreateProductPage() {
                   <div className="space-y-4">
                      <label className="text-[12px]  text-slate-900 capitalize tracking-widest">Department</label>
                      <select 
-                        value={selectedCategories[0]} onChange={e => setSelectedCategories([e.target.value])}
+                        value={selectedCategories[0]} onChange={e => handleCategoryChange(e.target.value)}
                         className={`w-full p-4 bg-slate-50 border rounded-2xl font-medium text-base ${!selectedCategories[0] ? 'border-orange-200' : 'border-slate-100'}`}
                      >
                         <option value="">Choose Category</option>
@@ -733,19 +833,27 @@ export default function CreateProductPage() {
   );
 }
 
-function Card({ icon, title, subTitle, children, className }: any) {
-   return (
-      <div className={`bg-white rounded-[32px] p-8 border border-slate-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6 ${className}`}>
-         <div className="flex items-center gap-4">
-            {icon && <div className="p-2.5 bg-slate-50 rounded-xl text-slate-900 group-hover:text-blue-600 transition-colors shadow-inner border border-slate-100">{icon}</div>}
-            <div className="flex-1">
-               <h3 className="text-[13px]  text-slate-900 capitalize tracking-widest leading-none">{title}</h3>
-               {subTitle && <p className="text-[11px] text-slate-900  capitalize tracking-widest mt-1.5 opacity-80">{subTitle}</p>}
-            </div>
-         </div>
-         <div className="pt-2">
-            {children}
-         </div>
-      </div>
-   );
+interface CardProps {
+  icon?: React.ReactNode;
+  title: React.ReactNode;
+  subTitle?: string;
+  children: React.ReactNode;
+  className?: string;
 }
+
+function Card({ icon, title, subTitle, children, className }: CardProps) {
+    return (
+       <div className={`bg-white rounded-[32px] p-8 border border-slate-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6 ${className}`}>
+          <div className="flex items-center gap-4">
+             {icon && <div className="p-2.5 bg-slate-50 rounded-xl text-slate-900 group-hover:text-blue-600 transition-colors shadow-inner border border-slate-100">{icon}</div>}
+             <div className="flex-1">
+                <h3 className="text-[13px]  text-slate-900 capitalize tracking-widest leading-none">{title}</h3>
+                {subTitle && <p className="text-[11px] text-slate-900  capitalize tracking-widest mt-1.5 opacity-80">{subTitle}</p>}
+             </div>
+          </div>
+          <div className="pt-2">
+             {children}
+          </div>
+       </div>
+    );
+ }

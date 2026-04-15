@@ -122,6 +122,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ productType, mockupI
           originY: "center",
           selectable: false,
           evented: false,
+          // @ts-ignore
           name: `label_${i}`,
         });
 
@@ -171,7 +172,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ productType, mockupI
     reader.onload = async (f) => {
       const data = f.target?.result as string;
       const img = await fabric.FabricImage.fromURL(data);
-      triggerAddToCanvas("current", img);
+      addToCanvas("current", img);
       activeSlotRef.current = null;
       if (fileInputRef.current) fileInputRef.current.value = "";
     };

@@ -16,7 +16,7 @@ export default function AcrylicPhotoRedirect() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+        <div className="w-14 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
         <p className="text-[12px]  capitalize tracking-[0.3em] text-slate-400">Loading Enhanced Studio...</p>
       </div>
     </div>

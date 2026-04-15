@@ -1,702 +1,683 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Layers, Plus, Save, Trash2, ChevronLeft, Loader2, AlertCircle, Info, Settings, ShieldAlert, Image as ImageIcon } from "lucide-react";
+import { 
+  Layers, Plus, Save, Trash2, ChevronLeft, Loader2, 
+  AlertCircle, Package, Info, CheckCircle2, Shapes, 
+  Maximize, ChevronRight, ListOrdered, Sparkles, X, 
+  Settings2, Copy, ShieldAlert, Image as ImageIcon
+} from "lucide-react";
 
-type Option = { id?: string; value: string; displayValue: string; image: string; price: number; thickness?: string; mounting?: string; uploading?: boolean };
-type Attribute = { id?: string; name: string; type: string; options: Option[] };
+// --- Types ---
+type ShapeConfig = {
+  id: string;
+  name: string;
+  image?: string;
+  sizes: string[]; 
+};
+
+type Variant = {
+  shape: string;
+  size: string;
+  thickness: string;
+  mounting: string;
+  width: number;
+  height: number;
+  sku: string;
+};
 
 export default function EditCategoryPage() {
   const router = useRouter();
   const params = useParams();
   const categoryId = params?.id as string;
 
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
-  
-  // Base Category State
+  const [success, setSuccess] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{ type: 'FRONTEND' | 'DATABASE' | 'CONNECTIVITY', message: string } | null>(null);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+  // --- Step 1: Basics ---
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
-  const [parentId, setParentId] = useState("");
+  const [slug, setSlug] = useState("");
   const [tags, setTags] = useState("");
-  const [categories, setCategories] = useState<any[]>([]);
+  const [parentId, setParentId] = useState("");
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [skipLayoutConfig, setSkipLayoutConfig] = useState(false);
+
+  const generatedSlug = name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+
+  // --- Step 2: Shapes & States ---
+  const [shapes, setShapes] = useState<ShapeConfig[]>([]);
+  const [newShapeName, setNewShapeName] = useState("");
+  const presetShapes = ["Portrait", "Landscape", "Square", "Circle", "Heart", "Hexagon"];
+
+  // --- Step 3: Specs & Mapping ---
+  const [thicknesses, setThicknesses] = useState<string[]>(["2 MM", "3 MM", "5 MM"]);
+  const [mountings, setMountings] = useState<string[]>(["Adhesive Tape (Included)", "Desktop Stand"]);
   
-  // Dynamic Attributes State
-  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [newThickness, setNewThickness] = useState("");
+  const [newMounting, setNewMounting] = useState("");
+  
+  const [specMapping, setSpecMapping] = useState<Record<string, { t: string[], m: string[] }>>({});
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  const toggleMapping = (key: string, type: 't' | 'm', value: string) => {
+    setSpecMapping(prev => {
+      const current = prev[key] || { t: [], m: [] };
+      const list = current[type];
+      const nextList = list.includes(value) ? list.filter(v => v !== value) : [...list, value];
+      return { ...prev, [key]: { ...current, [type]: nextList } };
+    });
+  };
 
+  const toggleAllColumn = (type: 't' | 'm', value: string) => {
+    const allRowsArr = shapes.flatMap(sh => sh.sizes.map(sz => `${sh.id}_${sz}`));
+    const allSelected = allRowsArr.every(key => (specMapping[key]?.[type] || []).includes(value));
+
+    setSpecMapping(prev => {
+      const next = { ...prev };
+      allRowsArr.forEach(key => {
+        const current = next[key] || { t: [], m: [] };
+        if (allSelected) {
+           next[key] = { ...current, [type]: (current[type] || []).filter(v => v !== value) };
+        } else {
+           if (!(current[type] || []).includes(value)) {
+              next[key] = { ...current, [type]: [...(current[type] || []), value] };
+           }
+        }
+      });
+      return next;
+    });
+  };
+
+  // --- Task Tracker ---
+  const [saveProgress, setSaveProgress] = useState<string | null>(null);
+
+  // --- Initial Data Load ---
   useEffect(() => {
     if (!categoryId || !API_URL) return;
-   
+    
     const fetchData = async () => {
       try {
         const [catRes, allCatsRes] = await Promise.all([
           fetch(`${API_URL}/categories/${categoryId}`),
           fetch(`${API_URL}/categories`)
         ]);
-       
+        
         const data = await catRes.json();
         const allCats = await allCatsRes.json();
-       
         if (data.error) throw new Error(data.error);
-       
-        setName(data.name);
-        setSlug(data.slug);
+
+        // 1. Basics
+        setName(data.name || "");
+        setSlug(data.slug || "");
         setDescription(data.description || "");
         setImage(data.image || "");
         setParentId(data.parentId || "");
         setTags(data.tags || "");
-       
-        // Map categoryAttributes and attributeOptions to frontend structure
-        const mappedAttributes = (data.categoryAttributes || []).map((attr: any) => ({
-          id: attr.id,
-          name: attr.name,
-          type: attr.type,
-          options: (attr.attributeOptions || []).map((opt: any) => ({
-            id: opt.id,
-            value: opt.value,
-            displayValue: opt.displayValue || "",
-            image: opt.image || "",
-            price: opt.price || 0,
-            thickness: opt.thickness || "",
-            mounting: opt.mounting || ""
-          }))
-        }));
-        setAttributes(mappedAttributes);
-        setCategories(allCats.filter((c: any) => c.id !== categoryId)); // Don't allow selecting itself as parent
+        setAllCategories((allCats || []).filter((c: any) => c.id !== categoryId));
+        setSkipLayoutConfig(data.tags?.includes("skip-layout") || false);
+
+        // 2. Specialized Attributes (Shapes & Sizes)
+        const shapeAttr = data.categoryAttributes?.find((a: any) => a.name.toLowerCase() === "shape");
+        const sizeAttr = data.categoryAttributes?.find((a: any) => a.name.toLowerCase() === "size");
+        const thickAttr = data.categoryAttributes?.find((a: any) => a.name.toLowerCase() === "thickness");
+        const mountAttr = data.categoryAttributes?.find((a: any) => a.name.toLowerCase() === "mounting");
+        const matrixAttr = data.categoryAttributes?.find((a: any) => a.name.toLowerCase().includes("matrix"));
+
+        if (matrixAttr && matrixAttr.attributeOptions?.[0]) {
+           try {
+              const savedMatrix = JSON.parse(matrixAttr.attributeOptions[0].value);
+              setSpecMapping(savedMatrix);
+           } catch (e) {
+              console.warn("Failed to parse saved matrix:", e);
+           }
+        }
+
+        const allSizesInDb = sizeAttr?.attributeOptions.map((o: any) => o.value) || [];
+
+        if (shapeAttr) {
+           const mappedShapes = shapeAttr.attributeOptions.map((opt: any) => {
+              const shapeName = opt.value.toLowerCase();
+                 // SMART GEOMETRIC SORT
+                 const filteredSizes = allSizesInDb.filter((s: string) => {
+                    const [w, h] = s.split('X').map(Number);
+                    if (isNaN(w) || isNaN(h)) return false; 
+                    
+                    const isPortrait = w < h;
+                    const isLandscape = w > h;
+                    const isEquilateral = w === h;
+
+                    if (shapeName.includes("portrait")) return isPortrait;
+                    if (shapeName.includes("landscape")) return isLandscape;
+                    // Circle, Heart, Hexagon, and Square all use Equilateral (Square) sizes
+                    if (shapeName.includes("square") || shapeName.includes("circle") || 
+                        shapeName.includes("heart") || shapeName.includes("hexagon")) {
+                       return isEquilateral;
+                    }
+                    return true;
+                 });
+
+              return {
+                 id: opt.id,
+                 name: opt.value,
+                 image: opt.image || "",
+                 sizes: filteredSizes
+              };
+           });
+           if (mappedShapes.length > 0) setShapes(mappedShapes);
+        }
+
+        if (thickAttr && thickAttr.attributeOptions?.length > 0) {
+           setThicknesses(thickAttr.attributeOptions.map((o: any) => o.value));
+        }
+        if (mountAttr && mountAttr.attributeOptions?.length > 0) {
+           setMountings(mountAttr.attributeOptions.map((o: any) => o.value));
+        }
+
       } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+        setErrorDetails({ type: 'DATABASE', message: "Initialization Failure: " + err.message });
+      } finally { setLoading(false); }
     };
 
     fetchData();
-  }, [API_URL, categoryId]);
+  }, [categoryId]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !API_URL) return;
-
     setUploading(true);
     const formData = new FormData();
     formData.append("image", file);
-
     try {
-      const res = await fetch(`${API_URL}/upload`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
       const data = await res.json();
-      if (res.ok && data.url) {
-        setImage(data.url);
-      } else {
-        setError(data.error || "Image upload failed");
-      }
-    } catch (err) {
-      setError("Failed to upload image.");
-    } finally {
-      setUploading(false);
-    }
+      if (res.ok && data.url) setImage(data.url);
+      else setErrorDetails({ type: 'DATABASE', message: data.error || "Upload failed" });
+    } catch (err) { setErrorDetails({ type: 'CONNECTIVITY', message: "Image upload failed." }); }
+    finally { setUploading(false); }
   };
 
-  const addAttribute = () => {
-    setAttributes([...attributes, { name: "", type: "SELECT", options: [] }]);
+  const addShape = (sn?: string) => {
+    const sName = sn || newShapeName;
+    if (!sName || shapes.find(s => s.name.toLowerCase() === sName.toLowerCase())) return;
+    setShapes([...shapes, { id: 'temp-' + Date.now(), name: sName, image: "", sizes: [] }]);
+    setNewShapeName("");
   };
 
-  const updateAttribute = (index: number, field: keyof Attribute, value: any) => {
-    const updated = [...attributes];
-    updated[index] = { ...updated[index], [field]: value };
-    setAttributes(updated);
+  const updateShapeImage = (id: string, url: string) => {
+    setShapes(shapes.map(s => s.id === id ? { ...s, image: url } : s));
   };
 
-  const removeAttribute = (index: number) => {
-    setAttributes(attributes.filter((_, i) => i !== index));
+  const removeShape = (id: string) => setShapes(shapes.filter(s => s.id !== id));
+
+  const updateSizes = (shapeId: string, bulkInput: string) => {
+    const parsedSizes = bulkInput.replace(/ /g, '').split(/[,\n]/).map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+    setShapes(prev => prev.map(s => s.id === shapeId ? { ...s, sizes: parsedSizes } : s));
   };
 
-  const addOption = (attrIndex: number) => {
-    const updated = [...attributes];
-    updated[attrIndex] = {
-      ...updated[attrIndex],
-      options: [...updated[attrIndex].options, { value: "", displayValue: "", image: "", price: 0, thickness: "", mounting: "" }]
-    };
-    setAttributes(updated);
-  };
-
-  const updateOption = (attrIndex: number, optIndex: number, field: keyof Option, value: any) => {
-    setAttributes(prev => {
-      const updated = [...prev];
-      const currentAttr = { ...updated[attrIndex] };
-      const updatedOptions = [...currentAttr.options];
-      const currentOpt = { ...updatedOptions[optIndex], [field]: value };
-     
-      // Auto-sync displayValue if value is a hex code
-      if (field === "value" && typeof value === 'string' && value.startsWith("#") && (value.length === 4 || value.length === 7)) {
-         currentOpt.displayValue = value;
-      }
-
-      updatedOptions[optIndex] = currentOpt;
-      currentAttr.options = updatedOptions;
-      updated[attrIndex] = currentAttr;
-      return updated;
-    });
-  };
-
-  const removeOption = (attrIndex: number, optIndex: number) => {
-    setAttributes(prev => {
-      const updated = [...prev];
-      const updatedAttr = { ...updated[attrIndex] };
-      updatedAttr.options = updatedAttr.options.filter((_, i) => i !== optIndex);
-      updated[attrIndex] = updatedAttr;
-      return updated;
-    });
-  };
-
-  const handleOptionImageUpload = async (attrIndex: number, optIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !API_URL) return;
-
-    updateOption(attrIndex, optIndex, "uploading", true as any);
-    const formData = new FormData();
-    formData.append("image", file);
-
-    try {
-      const res = await fetch(`${API_URL}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        updateOption(attrIndex, optIndex, "image", data.url);
-      } else {
-        setError(data.error || "Image upload failed");
-      }
-    } catch (err) {
-      setError("Failed to upload image.");
-    } finally {
-      updateOption(attrIndex, optIndex, "uploading", false as any);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // --- Final Atomic Sync Update ---
+  const handleFinalSubmit = async () => {
+    if (!name) { setErrorDetails({ type: 'FRONTEND', message: "Identity Name is missing." }); return; }
     setSubmitting(true);
-    setError("");
+    setErrorDetails(null);
+    setSaveProgress("Initiating Category Sync...");
 
     try {
-      // 1. Update Basic Details
-      const res = await fetch(`${API_URL}/categories/${categoryId}`, {
-         method: 'PATCH',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ name, slug, description, image, parentId: parentId || null, tags })
+      // 1. Sync Core Metadata
+      setSaveProgress("Updating Identity & Logo...");
+      const coreRes = await fetch(`${API_URL}/categories/${categoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          name, 
+          slug: slug || name.toLowerCase().replace(/[`~!@#$%^&*()_|+=?;:'",.<>\{\}\[\]\\\/]/gi, '').replace(/ /g, '-'), 
+          image, 
+          description, 
+          parentId: parentId || null,
+          tags: skipLayoutConfig ? (tags.includes("skip-layout") ? tags : (tags ? tags + ", skip-layout" : "skip-layout")) : tags.replace(", skip-layout", "").replace("skip-layout", "").trim()
+        })
       });
-     
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        if (errorData.code) {
-           throw new Error(`DB<${errorData.code}>: ${errorData.description || errorData.error || 'Failed to update basic details'}`);
-        }
-        throw new Error(errorData.error || "Failed to update category details.");
+      if (!coreRes.ok) {
+        const errorData = await coreRes.json();
+        throw new Error(errorData.error || "Identity Update Failed");
       }
 
-      // 2. Sync New Settings & Choices (Product Options)
-      for (const attr of attributes) {
-        let currentAttrId = attr.id;
+      // 2. Individual Attribute Synchronization
+      const syncAttributeSet = async (attrName: string, type: string, values: string[]) => {
+        setSaveProgress(`Synchronizing ${attrName} Definitions...`);
+        
+        // Always get absolute fresh state
+        const catRes = await fetch(`${API_URL}/categories/${categoryId}`);
+        const catData = await catRes.json();
+        let attr = catData.categoryAttributes?.find((a: any) => a.name === attrName);
 
-        // 1. Create OR Update Attribute
-        if (!currentAttrId) {
-          if (!attr.name) continue;
-          const attrRes = await fetch(`${API_URL}/categories/${categoryId}/attributes`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: attr.name, type: attr.type })
-          });
-          const newAttr = await attrRes.json();
-          if (!attrRes.ok) {
-            if (newAttr.code) throw new Error(`DB<${newAttr.code}>: ${newAttr.description || newAttr.error || `Error creating setting: ${attr.name}`}`);
-            throw new Error(newAttr.error || `Failed to create setting: ${attr.name}`);
-          }
-          currentAttrId = newAttr.id;
-        } else {
-          // Update Existing Attribute
-          const updateAttrRes = await fetch(`${API_URL}/categories/attributes/${currentAttrId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: attr.name, type: attr.type })
-          });
-          if (!updateAttrRes.ok) {
-            const updateAttrData = await updateAttrRes.json().catch(() => ({}));
-            const msg = updateAttrData.code 
-              ? `DB<${updateAttrData.code}>: ${updateAttrData.description || updateAttrData.error || 'Sync Failure'}`
-              : (updateAttrData.error || `Failed to update setting: ${attr.name}`);
-            setError(msg);
-            setSubmitting(false);
-            return;
-          }
+        if (!attr) {
+           const createRes = await fetch(`${API_URL}/categories/${categoryId}/attributes`, {
+             method: "POST", headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ name: attrName, type })
+           });
+           attr = await createRes.json();
         }
 
-        // 2. Loop through choices for this setting
-        for (const opt of attr.options) {
-          if (!opt.id) {
-            // Create NEW Choice
-            if (!opt.value) continue;
-            const optRes = await fetch(`${API_URL}/categories/attributes/${currentAttrId}/options`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ value: opt.value, displayValue: opt.displayValue, image: opt.image, price: opt.price, thickness: opt.thickness, mounting: opt.mounting })
-            });
-            if (!optRes.ok) {
-              const optData = await optRes.json().catch(() => ({}));
-              const msg = optData.code 
-                ? `DB<${optData.code}>: ${optData.description || optData.error || 'Sync Failure'}`
-                : (optData.error || `Failed to add choice: ${opt.value}`);
-              setError(msg);
-              setSubmitting(false);
-              return; // Halt execution and show error in red box
-            }
-          } else {
-            // Update EXISTING Choice
-            const updateOptRes = await fetch(`${API_URL}/categories/options/${opt.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ value: opt.value, displayValue: opt.displayValue, image: opt.image, price: opt.price, thickness: opt.thickness, mounting: opt.mounting })
-            });
-            if (!updateOptRes.ok) {
-              const updateOptData = await updateOptRes.json().catch(() => ({}));
-              const msg = updateOptData.code 
-                ? `DB<${updateOptData.code}>: ${updateOptData.description || updateOptData.error || 'Sync Failure'}`
-                : (updateOptData.error || `Failed to update choice: ${opt.value}`);
-              setError(msg);
-              setSubmitting(false);
-              return; // Halt execution
-            }
-          }
+        const existingOptions = attr.attributeOptions || [];
+        const uniqueValues = Array.from(new Set(values));
+
+        // Surgical Update (Only delete if not in use or explicitly removed)
+        for (const opt of existingOptions) {
+           if (!uniqueValues.includes(opt.value)) {
+              try {
+                await fetch(`${API_URL}/categories/options/${opt.id}`, { method: "DELETE" });
+              } catch (e) {
+                console.warn(`Soft-skipped deletion for active option: ${opt.value}`);
+              }
+           }
         }
-      }
 
-      alert("Category updated successfully.");
-      router.push("/admin/categories");
+        // Add/Update
+        for (const v of uniqueValues) {
+           const exists = existingOptions.find((o: any) => o.value === v);
+           if (!exists) {
+              const shapeMapping = shapes.find(sh => sh.name === v);
+              await fetch(`${API_URL}/categories/attributes/${attr.id}/options`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ value: v, displayValue: v, price: 0, image: shapeMapping?.image || "" })
+              });
+           } else {
+              const shapeMapping = shapes.find(sh => sh.name === v);
+              if (shapeMapping?.image && exists.image !== shapeMapping.image) {
+                await fetch(`${API_URL}/categories/options/${exists.id}`, {
+                  method: "PATCH", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ image: shapeMapping.image })
+                });
+              }
+           }
+        }
+      };
+
+      await syncAttributeSet("Shape", "BUTTON_GROUP", shapes.map(s => s.name));
+      await syncAttributeSet("Size", "SELECT", Array.from(new Set(shapes.flatMap(s => s.sizes))));
+      await syncAttributeSet("Thickness", "SELECT", thicknesses);
+      await syncAttributeSet("Mounting", "SELECT", mountings);
+      await syncAttributeSet("Matrix_Config", "JSON", [JSON.stringify(specMapping)]);
+
+      setSaveProgress("Sync Complete. Finalizing...");
+      setSuccess(true);
+      setTimeout(() => router.push("/admin/categories"), 2000);
     } catch (err: any) {
-      console.error("Submission Error:", err);
-      setError(err.message || "An unexpected error occurred during save.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm("Are you sure? Deleting this category will remove all associated products. This cannot be undone.")) return;
-    setSubmitting(true);
-    try {
-       const res = await fetch(`${API_URL}/categories/${categoryId}`, { method: 'DELETE' });
-       if (res.ok) router.push("/admin/categories");
-    } catch (err: any) {
-       setError(err.message);
-    } finally {
-       setSubmitting(false);
-    }
-  }
-
-  const handleDeleteAttribute = async (attrId: string, index: number) => {
-    if (!attrId) {
-      removeAttribute(index);
-      return;
-    }
-    if (!confirm("This will permanently remove this option set from the category. Continue?")) return;
-    try {
-      const res = await fetch(`${API_URL}/categories/attributes/${attrId}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      
-      if (res.ok) {
-        setAttributes(attributes.filter((_, i) => i !== index));
-      } else {
-        if (data.code) throw new Error(`DB<${data.code}>: ${data.description || data.error || 'Failed to delete setting'}`);
-        throw new Error(data.error || "Failed to delete setting.");
-      }
-    } catch (err: any) {
-      console.error("Delete Setting Error:", err);
-      setError(err.message);
-    }
-  };
-
-  const handleDeleteOption = async (attrIndex: number, optId: string, optIndex: number) => {
-    if (!optId) {
-      removeOption(attrIndex, optIndex);
-      return;
-    }
-    setError("");
-    if (!confirm("Delete this choice?")) return;
-    try {
-      const res = await fetch(`${API_URL}/categories/options/${optId}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        setAttributes(prev => {
-          const updated = [...prev];
-          const updatedAttr = { ...updated[attrIndex] };
-          updatedAttr.options = updatedAttr.options.filter((_, i) => i !== optIndex);
-          updated[attrIndex] = updatedAttr;
-          return updated;
-        });
-      } else {
-        if (data.code) throw new Error(`DB<${data.code}>: ${data.description || data.error || 'Failed to delete choice'}`);
-        throw new Error(data.error || "Failed to delete choice.");
-      }
-    } catch (err: any) {
-      console.error("Delete Choice Error:", err);
-      setError(err.message);
+      setErrorDetails({ type: 'DATABASE', message: err.message });
+      setSaveProgress(null);
+    } finally { 
+      setSubmitting(false); 
     }
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-       <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
-       <p className="text-[10px] font-medium   text-slate-700">Loading Category Details...</p>
-    </div>
+     <div className="flex h-screen items-center justify-center bg-white">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+     </div>
   );
 
+  if (success) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
+        <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-8 animate-bounce">
+          <CheckCircle2 size={48} />
+        </div>
+        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter mb-4">Update Successful</h1>
+        <div className="mt-12 flex flex-col items-center gap-4">
+           <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 font-bold text-sm">
+              <Loader2 size={16} className="animate-spin" />
+              <span>Redirecting to index...</span>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#FAF9F6] font-sans pb-20 text-slate-900">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-10 h-20 flex justify-between items-center">
-          <div className="flex items-center gap-6">
-            <button 
-              type="button"
-              onClick={() => router.back()}
-              className="p-2.5 hover:bg-slate-50 rounded-xl border border-slate-200 transition-all text-slate-800 hover:text-slate-900"
-            >
-              <ChevronLeft className="w-5 h-5" />
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 py-4">
+        <div className="max-w-4xl mx-auto px-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.back()} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <ChevronLeft size={20} className="text-slate-500" />
             </button>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="flex flex-col">
-              <h1 className="text-xl font-medium text-blue-600 tracking-tight leading-none">Category Editor</h1>
-              <span className="text-[10px] font-medium text-slate-400 capitalize tracking-tight mt-1 italic">Taxonomy Matrix v2.0</span>
+            <div>
+               <h1 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Category Editor</h1>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Step {step} of {skipLayoutConfig ? '3' : '4'} • {step === 1 ? 'Basics' : step === 2 ? 'Shapes' : step === 3 ? 'Sizes' : 'Matrix'}</p>
             </div>
           </div>
-         
-          <div className="flex items-center gap-4">
-            <button 
-              type="button"
-              onClick={() => handleDelete()}
-              disabled={submitting}
-              className="px-6 py-2.5 text-[11px] font-medium text-slate-400 hover:text-rose-500 transition-all  "
-            >
-              Decommission Node
-            </button>
-            <button 
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="px-8 py-2.5 bg-blue-600 text-white font-medium tracking-tight text-[11px] rounded-xl hover:bg-slate-900 transition-all shadow-xl shadow-blue-500/10 active:scale-95 disabled:opacity-50 flex items-center gap-2.5"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>Commit Changes</span>
-            </button>
+          <div className="flex gap-3">
+              {step > 1 && (
+                <button onClick={() => setStep(step - 1)} className="px-5 py-2 text-slate-600 font-black text-[12px] uppercase hover:text-slate-900 transition-all active:scale-95">Back</button>
+              )}
+              
+              <button 
+                onClick={handleFinalSubmit} 
+                disabled={submitting}
+                className={`px-8 py-2.5 rounded-xl font-black text-[12px] uppercase tracking-widest shadow-xl transition-all flex items-center gap-2 active:scale-95 ${step === 4 ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-white border border-slate-200 text-slate-900 shadow-slate-100 hover:border-blue-600 hover:text-blue-600'}`}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="animate-pulse">{saveProgress || 'Saving...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>{step === 4 ? 'Finalize & Save' : 'Commit changes'}</span>
+                  </>
+                )}
+              </button>
+
+              {(step < 4 && !(step === 3 && skipLayoutConfig)) && (
+                <button onClick={() => setStep(step + 1)} disabled={step === 1 && !name} className="px-8 py-2.5 bg-slate-900 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
+                  Continue <ChevronRight size={14} />
+                </button>
+              )}
+              {step === 3 && skipLayoutConfig && (
+                <button onClick={handleFinalSubmit} disabled={submitting} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center gap-2">
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  <span>Finalize & Save</span>
+                </button>
+              )}
           </div>
+        </div>
+        <div className="h-1 bg-slate-50 mt-4 overflow-hidden">
+           <div className="h-full bg-blue-600 transition-all duration-500 ease-out" style={{ width: `${(step/4)*100}%` }} />
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-10 py-10">
-        {error && (
-          <div className="mb-8 bg-red-50 border border-red-200 p-4 rounded-2xl flex items-center gap-3 text-red-700 font-medium text-sm shadow-sm animate-in fade-in slide-in-from-top-2">
-             <AlertCircle className="w-5 h-5" />
-             {error}
+      <main className="max-w-4xl mx-auto px-6 py-12">
+        {errorDetails && (
+          <div className="mb-10 p-6 bg-rose-50 border-2 border-rose-200 rounded-3xl text-rose-900 animate-in slide-in-from-top-4">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="text-rose-500 mt-1" size={20} />
+              <div className="flex-1">
+                <h3 className="font-black text-[11px] uppercase tracking-widest mb-1">Update Error</h3>
+                <p className="text-sm font-bold">{errorDetails.message}</p>
+              </div>
+              <button onClick={() => setErrorDetails(null)}><X size={16} /></button>
+            </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-         
-          <div className="lg:col-span-2 space-y-8">
-           
-            {/* Basic Details Section */}
-            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-lg overflow-hidden">
-               <div className="px-8 py-6 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/10">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-medium text-slate-900">Basic Details</h2>
-                    <p className="text-xs font-medium text-slate-500 tracking-tight">Main information and branding of the category</p>
-                  </div>
-               </div>
-              
-               <div className="p-8 space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <label className="text-[11px] font-medium text-slate-950   ml-1">Category Name</label>
-                      <input 
-                        type="text" required
-                        placeholder="e.g. Acrylic Photo Frames"
-                        value={name} onChange={e => { setName(e.target.value); setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-')); }}
-                        className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-medium text-slate-900 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-[11px] font-medium text-slate-950   ml-1">Parent Category</label>
-                      <select 
-                        value={parentId} onChange={e => setParentId(e.target.value)}
-                        className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-medium text-slate-900 focus:bg-white focus:border-blue-600 transition-all outline-none cursor-pointer"
-                      >
-                        <option value="">None (Top Level)</option>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <label className="text-[11px] font-medium text-slate-900   ml-1">URL Shortcut (Slug)</label>
-                      <input 
-                        type="text" value={slug} onChange={e => setSlug(e.target.value)}
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium text-slate-900 focus:bg-white focus:border-blue-500 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-[11px] font-medium text-slate-800   ml-1">Category Image</label>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <label className="flex items-center justify-center gap-2 w-full px-5 py-4 bg-white border border-slate-200 border-dashed rounded-2xl font-medium text-slate-800 hover:bg-white hover:border-blue-500 transition-all cursor-pointer">
-                            <Plus className="w-5 h-5 text-blue-500" />
-                            <span>{image ? "Change Image" : "Upload Local Image"}</span>
-                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                          </label>
-                        </div>
-                        {image && (
-                          <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 bg-white flex-shrink-0 animate-in zoom-in duration-300">
-                             <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${image}`} className="w-full h-full object-cover" alt="Preview" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <textarea 
-                      rows={3}
-                      value={description} onChange={e => setDescription(e.target.value)}
-                      className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-orange-50 transition-all outline-none resize-none"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-medium text-slate-800   ml-1">Layout Tags (for Homepage Sections)</label>
-                    <input 
-                      type="text"
-                      placeholder="e.g. Wall Decor, Desk Decor (comma separated)"
-                      value={tags} onChange={e => setTags(e.target.value)}
-                      className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-medium text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-orange-50 transition-all outline-none"
-                    />
-                    <p className="text-[10px] text-slate-400 font-medium  tracking-tight ml-1">Use these to group categories into sections on your homepage.</p>
-                  </div>
-               </div>
-            </div>
-
-            {/* Product Options Section */}
-            <div className="space-y-6">
-              <div className="flex justify-between items-center px-4">
+        {step === 1 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+             <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Sparkles size={24} /></div>
                 <div>
-                  <h2 className="text-xl font-medium tracking-tight">Product Options</h2>
-                  <p className="text-sm font-medium text-slate-700 mt-1">Configure choices like Size, Color, or Material</p>
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Category Identity</h2>
+                   <p className="text-slate-400 font-medium text-sm">Update the branding and parent hierarchy.</p>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={addAttribute}
-                  className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-xs   hover:bg-blue-600 transition-all shadow-lg active:scale-95 flex items-center gap-3"
-                >
-                  <Plus className="w-4 h-4" /> Add Option
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {attributes.map((attr, attrIndex) => (
-                  <div key={attrIndex} className="bg-white rounded-[2rem] border border-slate-200 shadow-[0_4px_20px_rgb(0,0,0,0.02)] overflow-hidden animate-in fade-in slide-in-from-top-6 duration-500">
-                    <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-                      <div className="flex items-center gap-4 flex-1 max-w-md">
-                         <input 
-                          placeholder="Option Name (e.g. Size)" 
-                          value={attr.name} onChange={e => updateAttribute(attrIndex, "name", e.target.value)}
-                          className="bg-transparent border-none text-lg font-medium text-slate-950 placeholder:text-slate-500 outline-none w-full"
-                         />
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <select 
-                          value={attr.type} onChange={e => updateAttribute(attrIndex, "type", e.target.value)}
-                          className="bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-medium text-slate-700 outline-none focus:border-blue-500 transition-all shadow-sm cursor-pointer"
-                        >
-                          <option value="SELECT">Classic Dropdown</option>
-                          <option value="BUTTON_GROUP">Selection Tiles</option>
-                          <option value="SWATCH">Color Samples</option>
-                        </select>
-                        <button 
-                          type="button" onClick={() => handleDeleteAttribute(attr.id || "", attrIndex)}
-                          className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-8">
-                       <div className="flex flex-wrap gap-4 items-center">
-                          {attr.options.map((opt, optIndex) => (
-                            <div key={optIndex} className="flex flex-col gap-3 bg-white border border-slate-200 rounded-[2rem] p-6 group hover:border-blue-200 transition-all shadow-sm">
-                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 mt-2 animate-in fade-in transition-all">
-                                     <div className="space-y-1.5">
-                                       <label className="text-[9px] font-medium text-slate-800   ml-1 block">Thickness</label>
-                                       <input 
-                                         placeholder="e.g. 3 MM"
-                                         value={opt.thickness || ""} onChange={e => updateOption(attrIndex, optIndex, "thickness", e.target.value)}
-                                         className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                       />
-                                     </div>
-                                     <div className="space-y-1.5">
-                                       <label className="text-[9px] font-medium text-slate-800   ml-1 block">Mounting</label>
-                                       <input 
-                                         placeholder="e.g. Tape"
-                                         value={opt.mounting || ""} onChange={e => updateOption(attrIndex, optIndex, "mounting", e.target.value)}
-                                         className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                       />
-                                     </div>
-                                 </div>
-                                 <div className="flex items-center gap-3 mt-3">
-                                   <div className="flex-1">
-                                     <label className="text-[9px] font-medium text-slate-800   ml-1 mb-1 block">Value Name</label>
-                                     <input 
-                                       placeholder="Value"
-                                       value={opt.value} onChange={e => updateOption(attrIndex, optIndex, "value", e.target.value)}
-                                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-xs font-medium text-slate-950 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                     />
-                                   </div>
-                                   <button 
-                                     type="button"
-                                     onClick={() => handleDeleteOption(attrIndex, opt.id || "", optIndex)}
-                                     className="mt-5 p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all"
-                                   >
-                                     <Trash2 className="w-4 h-4" />
-                                   </button>
-                                 </div>
-
-                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 mt-2 animate-in fade-in transition-all">
-                                     <div className="space-y-1.5">
-                                       <label className="text-[9px] font-medium text-slate-800   ml-1 block">Unit Cost (₹)</label>
-                                       <input 
-                                         type="number"
-                                         placeholder="0.00"
-                                         value={opt.price} 
-                                         onChange={e => updateOption(attrIndex, optIndex, "price", parseFloat(e.target.value) || 0)}
-                                         className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-xs font-medium text-blue-600 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                       />
-                                     </div>
-                                     <div className="space-y-1.5">
-                                       <label className="text-[9px] font-medium text-slate-800   ml-1 block">Swatch Color</label>
-                                       <div className="flex items-center gap-2">
-                                       <div className="relative w-10 h-10 rounded-xl border-2 border-slate-200 overflow-hidden shadow-sm flex-shrink-0">
-                                         <input 
-                                           type="color" 
-                                           value={opt.displayValue || "#000000"} 
-                                           onChange={e => updateOption(attrIndex, optIndex, "displayValue", e.target.value)}
-                                           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300%] h-[300%] cursor-pointer border-none p-0 bg-transparent"
-                                         />
-                                       </div>
-                                         <input 
-                                           type="text"
-                                           value={opt.displayValue || "#000000"}
-                                           onChange={e => updateOption(attrIndex, optIndex, "displayValue", e.target.value)}
-                                           className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[10px] font-mono font-medium text-slate-950 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                           placeholder="#HEX"
-                                         />
-                                       </div>
-                                     </div>
-                                     <div className="space-y-1.5 col-span-2">
-                                       <label className="text-[9px] font-medium text-slate-800   ml-1 block">Image Swatch Overlay</label>
-                                       <div className="flex items-center gap-2">
-                                         <input 
-                                           placeholder="Image URL"
-                                           value={opt.image} onChange={e => updateOption(attrIndex, optIndex, "image", e.target.value)}
-                                           className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[9px] font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                         />
-                                         <label className="p-2 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-white hover:border-blue-500 transition-all">
-                                           {opt.uploading ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5 text-slate-700" />}
-                                           <input type="file" className="hidden" accept="image/*" onChange={(e) => handleOptionImageUpload(attrIndex, optIndex, e)} />
-                                         </label>
-                                       </div>
-                                     </div>
-                                   </div>
-                             </div>
-                          ))}
-                          <button 
-                            type="button" onClick={() => addOption(attrIndex)}
-                            className="px-5 py-2.5 bg-orange-50 text-blue-600 rounded-2xl text-[10px] font-medium   border border-blue-100 hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2"
-                          >
-                            <Plus className="w-4 h-4" /> 
-                            <span>Add Choice</span>
-                          </button>
-                       </div>
-                    </div>
+             </div>
+             <div className="bg-white rounded-[2.5rem] border border-slate-200 p-10 shadow-sm space-y-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Category Name</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full text-2xl font-black text-slate-900 outline-none bg-transparent border-b-2 border-slate-100 focus:border-blue-600 transition-all pb-2" />
                   </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Parent Category</label>
+                    <select value={parentId} onChange={e => setParentId(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm">
+                       <option value="">None (Top Level)</option>
+                       {allCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-6 border-t border-slate-50">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Asset Logo</label>
+                   {!image ? (
+                     <label className="relative group cursor-pointer block">
+                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                        <div className="w-full h-32 rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center gap-4 hover:bg-white hover:border-blue-400 transition-all">
+                           {uploading ? <Loader2 size={24} className="text-blue-500 animate-spin" /> : <Package size={24} className="text-slate-400" />}
+                           <span className="font-black text-[11px] uppercase tracking-widest">Click to upload image</span>
+                        </div>
+                     </label>
+                   ) : (
+                     <div className="relative group w-48 h-32 rounded-[2rem] overflow-hidden border border-slate-200 shadow-lg">
+                        <img src={image.startsWith('/') ? `${API_URL?.replace('/api','')}${image}` : image} className="w-full h-full object-cover" />
+                        <button onClick={() => setImage("")} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                     </div>
+                   )}
+                </div>
+
+                <div className="space-y-4 pt-6 border-t border-slate-50">
+                  <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Meta summary..." className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-medium outline-none focus:bg-white focus:border-blue-500 transition-all" />
+                  <div className="flex items-center justify-between">
+                    <input value={tags} onChange={e => setTags(e.target.value)} placeholder="Wall Decor, Trending, Acrylic" className="flex-1 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold" />
+                    <label className="flex items-center gap-3 ml-6 cursor-pointer group">
+                      <div className={`w-12 h-6 rounded-full transition-all relative ${skipLayoutConfig ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${skipLayoutConfig ? 'left-7' : 'left-1'}`} />
+                      </div>
+                      <input type="checkbox" className="hidden" checked={skipLayoutConfig} onChange={e => setSkipLayoutConfig(e.target.checked)} />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-900">Skip Layout Matrix</span>
+                    </label>
+                  </div>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+             <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center"><Shapes size={24} /></div>
+                <div>
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Shapes Library</h2>
+                   <p className="text-slate-400 font-medium text-sm">Add or remove shapes that define this category's layouts.</p>
+                </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {presetShapes.map(ps => (
+                   <button key={ps} onClick={() => addShape(ps)} disabled={shapes.some(s => s.name === ps)} className={`h-16 rounded-2xl border-2 flex items-center justify-center gap-3 font-black text-[12px] uppercase tracking-widest transition-all ${shapes.some(s => s.name === ps) ? 'bg-purple-600 text-white border-purple-600 shadow-xl' : 'bg-white text-slate-400 border-slate-100 hover:border-purple-200'}`}>
+                      <span>{ps}</span>
+                   </button>
                 ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar Area */}
-          <div className="space-y-8">
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-8 space-y-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-               <div className="flex items-center gap-3 mb-2">
-                 <Settings className="w-5 h-5 text-slate-700" />
-                 <h3 className="text-sm font-medium text-slate-900  ">Category Summary</h3>
-               </div>
-              
-               <div className="space-y-5">
-                  <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                    <span className="text-xs font-medium text-slate-800  tracking-tight">Status</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                      <span className="text-[10px] font-medium text-blue-600 ">Active</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                    <span className="text-xs font-medium text-slate-800  tracking-tight">Structure</span>
-                    <span className="text-xs font-medium text-slate-900">{attributes.length} Options</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                    <span className="text-xs font-medium text-slate-800  tracking-tight">Total Values</span>
-                    <span className="text-xs font-medium text-slate-900">
-                      {attributes.reduce((acc, a) => acc + a.options.length, 0)} Added
-                    </span>
-                  </div>
-               </div>
-
-               <div className="pt-4 p-4 bg-orange-50/50 rounded-2xl border border-blue-100 flex items-start gap-3">
-                  <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                  <p className="text-[11px] font-medium text-orange-700 leading-relaxed italic">
-                    Updating this category will affect every product currently assigned here.
-                  </p>
-               </div>
-            </div>
-
-            <div className="bg-red-50/50 rounded-[2rem] p-8 border border-red-100 space-y-4">
-                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                   <ShieldAlert className="w-5 h-5 text-red-600" />
+             </div>
+             <div className="bg-white rounded-[2.5rem] border border-slate-200 p-10 shadow-sm">
+                <div className="flex gap-3 mb-8">
+                   <input type="text" value={newShapeName} onChange={e => setNewShapeName(e.target.value)} placeholder="Custom shape name..." className="flex-1 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none" />
+                   <button onClick={() => addShape()} className="px-8 bg-slate-900 text-white rounded-2xl font-black text-[12px] uppercase">Add</button>
                 </div>
-                <h3 className="font-medium text-lg text-slate-900">Important Note</h3>
-                <p className="text-xs text-slate-900 font-medium leading-relaxed">
-                  Be careful while removing options. Deleting an option might affect products that are already using it.
-                </p>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {shapes.map(s => (
+                      <div key={s.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-purple-200 transition-all">
+                         <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-[10px] uppercase">{s.name.substring(0,2)}</div>
+                               <span className="font-black text-[12px] uppercase tracking-widest text-slate-900">{s.name}</span>
+                            </div>
+                            <button onClick={() => removeShape(s.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><X size={16} /></button>
+                         </div>
+                         
+                         <label className="relative group cursor-pointer block h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden hover:bg-white hover:border-purple-300 transition-all">
+                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                               const file = e.target.files?.[0];
+                               if (!file) return;
+                               const formData = new FormData();
+                               formData.append("image", file);
+                               const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
+                               const data = await res.json();
+                               if (data.url) updateShapeImage(s.id, data.url);
+                            }} />
+                            {s.image ? (
+                               <img src={s.image.startsWith('/') ? `${API_URL?.replace('/api','')}${s.image}` : s.image} className="w-full h-full object-contain p-2" />
+                            ) : (
+                               <div className="h-full flex flex-col items-center justify-center gap-1">
+                                  <ImageIcon size={20} className="text-slate-300" />
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Add Viz</span>
+                               </div>
+                            )}
+                         </label>
+                      </div>
+                   ))}
+                </div>
+             </div>
           </div>
+        )}
 
-        </div>
-      </div>
+        {step === 3 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+             <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center"><ListOrdered size={24} /></div>
+                <div>
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Size Definitions</h2>
+                   <p className="text-slate-400 font-medium text-sm">Update the W x H strings for each shape.</p>
+                </div>
+             </div>
+             <div className="space-y-6">
+                {shapes.map(s => (
+                   <div key={s.id} className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col md:flex-row gap-8">
+                      <div className="w-48 pt-2">
+                         <div className="px-5 py-2.5 bg-slate-900 text-white rounded-xl inline-flex items-center gap-2 mb-2">
+                            <Shapes size={14} /><span className="font-black text-[10px] uppercase tracking-widest">{s.name}</span>
+                         </div>
+                      </div>
+                      <div className="flex-1">
+                         <textarea rows={2} placeholder="7x10, 8x12, 12x18..." defaultValue={s.sizes.join(', ')} onBlur={(e) => updateSizes(s.id, e.target.value)} className="w-full p-6 bg-slate-50 border border-slate-100 rounded-2xl font-mono text-base font-black text-slate-700 outline-none focus:bg-white focus:border-orange-500 transition-all resize-none shadow-inner" />
+                         <div className="flex items-center justify-between mt-3 px-1">
+                            <div className="flex items-center gap-2">
+                               <Info size={12} className="text-slate-400" />
+                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                  {s.name.toLowerCase().includes('portrait') ? 'Requirement: W < H (Rectangle)' : 
+                                   s.name.toLowerCase().includes('landscape') ? 'Requirement: W > H (Rectangle)' : 
+                                   'Requirement: W = H (Equilateral)'}
+                               </span>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">{s.sizes.length} Definitions</span>
+                         </div>
+                         <div className="flex flex-wrap gap-2 mt-4">
+                            {s.sizes.map((sz, idx) => (
+                               <span key={idx} className="px-3 py-1 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-black border border-orange-100 uppercase">{sz}</span>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+             <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><Settings2 size={24} /></div>
+                <div>
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Constraint Matrix</h2>
+                   <p className="text-slate-400 font-medium text-sm">Assign available depths and hardware for each size.</p>
+                </div>
+             </div>
+
+             <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8 border-b border-slate-50">
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Add Depth Option</label>
+                      <div className="flex gap-2">
+                         <input type="text" value={newThickness} onChange={e => setNewThickness(e.target.value)} placeholder="e.g. 8 MM" className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold outline-none" />
+                         <button onClick={() => { if(newThickness && !thicknesses.includes(newThickness)) { setThicknesses([...thicknesses, newThickness]); setNewThickness(""); } }} className="px-5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest"><Plus size={14} /></button>
+                      </div>
+                   </div>
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Add Hardware Option</label>
+                      <div className="flex gap-2">
+                         <input type="text" value={newMounting} onChange={e => setNewMounting(e.target.value)} placeholder="e.g. Desk Stand" className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold outline-none" />
+                         <button onClick={() => { if(newMounting && !mountings.includes(newMounting)) { setMountings([...mountings, newMounting]); setNewMounting(""); } }} className="px-5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest"><Plus size={14} /></button>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="overflow-x-auto -mx-8 px-8">
+                   <table className="w-full text-left border-collapse">
+                      <thead>
+                         <tr className="border-b-2 border-slate-100">
+                            <th className="py-6 font-black text-xs text-slate-900 uppercase tracking-widest w-48">Shape & Size</th>
+                            {thicknesses.map(t => {
+                               const allRowsArr = shapes.flatMap(sh => sh.sizes.map(sz => `${sh.id}_${sz}`));
+                               const isAll = allRowsArr.length > 0 && allRowsArr.every(key => (specMapping[key]?.t || []).includes(t));
+                               return (
+                                 <th key={t} className="py-6 px-3 align-top text-center">
+                                    <div className="flex flex-col items-center gap-2">
+                                       <span className="font-black text-[11px] text-slate-600 uppercase tracking-widest leading-none mb-1 text-center whitespace-nowrap">{t}</span>
+                                       <button 
+                                          onClick={() => toggleAllColumn('t', t)}
+                                          className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] transition-all border ${isAll ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-blue-400 hover:text-blue-600'}`}
+                                       >
+                                          {isAll ? 'All On' : 'Set All'}
+                                       </button>
+                                    </div>
+                                 </th>
+                               );
+                             })}
+                            <th className="w-6 border-r border-slate-100" />
+                            {mountings.map(m => {
+                               const allRowsArr = shapes.flatMap(sh => sh.sizes.map(sz => `${sh.id}_${sz}`));
+                               const isAll = allRowsArr.length > 0 && allRowsArr.every(key => (specMapping[key]?.m || []).includes(m));
+                               return (
+                                 <th key={m} className="py-6 px-3 align-top text-center">
+                                    <div className="flex flex-col items-center gap-2 text-center">
+                                       <span className="font-black text-[11px] text-slate-600 uppercase tracking-widest whitespace-nowrap leading-none mb-1">{m}</span>
+                                       <button 
+                                          onClick={() => toggleAllColumn('m', m)}
+                                          className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] transition-all border ${isAll ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-blue-400 hover:text-blue-600'}`}
+                                       >
+                                          {isAll ? 'All On' : 'Set All'}
+                                       </button>
+                                    </div>
+                                 </th>
+                               );
+                             })}
+                         </tr>
+                      </thead>
+                      <tbody>
+                         {shapes.map(sh => sh.sizes.map(sz => {
+                            const key = `${sh.id}_${sz}`;
+                            const active = specMapping[key] || { t: [], m: [] };
+                            return (
+                               <tr key={key} className="border-b border-slate-50 group hover:bg-slate-50 transition-colors">
+                                  <td className="py-5 flex items-center gap-4">
+                                     <div className="px-2.5 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-200 shrink-0">{sh.name}</div>
+                                     <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{sz}</span>
+                                  </td>
+                                  {thicknesses.map(t => (
+                                     <td key={t} className="py-5 px-3 text-center">
+                                        <button onClick={() => toggleMapping(key, 't', t)} className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center mx-auto shadow-sm active:scale-90 ${active.t.includes(t) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-transparent hover:border-blue-400'}`}><CheckCircle2 size={14} strokeWidth={4} /></button>
+                                     </td>
+                                  ))}
+                                  <td className="w-6 border-r border-slate-100" />
+                                  {mountings.map(m => (
+                                     <td key={m} className="py-5 px-3 text-center">
+                                        <button onClick={() => toggleMapping(key, 'm', m)} className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center mx-auto shadow-sm active:scale-90 ${active.m.includes(m) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-transparent hover:border-blue-400'}`}><CheckCircle2 size={14} strokeWidth={4} /></button>
+                                     </td>
+                                  ))}
+                               </tr>
+                            );
+                         }))}
+                      </tbody>
+                   </table>
+                </div>
+
+                <div className="pt-10 space-y-4">
+                   <div className="bg-red-50/50 rounded-3xl p-8 border border-red-100 flex items-start gap-4">
+                      <ShieldAlert className="text-red-500 mt-1" size={20} />
+                      <div>
+                         <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">Matrix Modification Warning</h4>
+                         <p className="text-[11px] font-medium text-slate-500 tracking-tight leading-relaxed italic">Changes here will OVERWRITE associated specialized attribute choices. Products using deleted combinations may need manual sync.</p>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
-

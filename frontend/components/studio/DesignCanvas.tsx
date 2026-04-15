@@ -38,10 +38,13 @@ export const Base64Image = ({ url, className, alt }: { url?: string; className?:
 
 export interface PhotoState {
   url: string;
-  scale: number;
   x: number;
   y: number;
+  scale: number;
   rotate: number;
+  flipX?: boolean;
+  opacity?: number;
+  blur?: number;
 }
 
 export interface TextState {
@@ -75,13 +78,16 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, onDoubleClick, 
   const x = (photo as any)?.x || 0;
   const y = (photo as any)?.y || 0;
   const rotate = (photo as any)?.rotate || 0;
+  const flipX = (photo as any)?.flipX || false;
+  const opacity = (photo as any)?.opacity;
+  const blur = (photo as any)?.blur;
 
   const [activeAction, setActiveAction] = useState<'move' | null>(null);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0, photoX: 0, photoY: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, photoX: x, photoY: y });
 
   const currentPhoto = useMemo(() =>
-    (typeof photo === 'object' && photo !== null) ? photo : { url: photoUrl, scale, x, y, rotate }
-    , [photo, photoUrl, scale, x, y, rotate]);
+    (typeof photo === 'object' && photo !== null) ? photo : { url: photoUrl, scale, x, y, rotate, flipX, opacity, blur }
+    , [photo, photoUrl, scale, x, y, rotate, flipX, opacity, blur]);
 
   useEffect(() => {
     if (!activeAction || !onAdjust) return;
@@ -173,7 +179,9 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, onDoubleClick, 
   return (
     <div 
       onDoubleClick={onDoubleClick}
-      className={`absolute inset-0 w-full h-full overflow-hidden ${hasPhoto && !isFinal ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'} ${!hasPhoto ? 'bg-black/5 flex items-center justify-center' : ''}`}>
+      onMouseDown={handleActionStart}
+      onWheel={handleWheel}
+      className={`absolute inset-0 w-full h-full overflow-hidden ${hasPhoto && !isFinal ? 'cursor-move pointer-events-auto' : 'pointer-events-none'} ${!hasPhoto ? 'bg-black/5 flex items-center justify-center' : ''}`}>
       {selectBtn}
       {hasPhoto && !isFinal && (
         <button 
@@ -190,8 +198,11 @@ export function Slot({ idx, photos, isFinal, onUpload, onAdjust, onDoubleClick, 
           crossOrigin="anonymous"
           className="absolute inset-0 select-none pointer-events-none w-full h-full object-cover"
           style={{
-            transform: `translate(${x}px, ${y}px) rotate(${rotate}deg) scale(${scale})`,
-            transformOrigin: 'center center'
+            transform: `translate(${x}px, ${y}px) rotate(${rotate}deg) scale(${scale * (flipX ? -1 : 1)}, ${scale})`,
+            transformOrigin: 'center center',
+            objectPosition: 'top',
+            opacity: opacity !== undefined ? opacity : 1,
+            filter: blur ? `blur(${blur}px)` : 'none'
           }}
         />
       )}

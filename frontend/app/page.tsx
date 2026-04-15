@@ -154,8 +154,8 @@ export default function Home() {
 
                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 justify-center">
                   {taggedCategories.map((item: any) => {
-                     const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet');
-                     const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
+                     const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet') || item.slug === 'photo-album';
+                     const href = item.slug === 'photo-album' ? '/photo-album' : (isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`);
 
                      return (
                         <Link key={item.id} href={href} className="flex flex-col items-center group text-center hover:-translate-y-1 transition-all">
@@ -219,8 +219,8 @@ export default function Home() {
                         <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
                            <div className="flex flex-col">
                               {filteredSuggestions.map((cat: any, index: number) => {
-                                 const isCustom = cat.slug.includes('acrylic') || cat.name.toLowerCase().includes('acrylic') || cat.name.toLowerCase().includes('lamp') || cat.name.toLowerCase().includes('clock') || cat.name.toLowerCase().includes('gallery') || cat.slug.includes('magnet');
-                                 const href = isCustom ? `/studio-v2?category=${cat.slug}` : `/shop?category=${cat.slug}`;
+                                 const isCustom = cat.slug.includes('acrylic') || cat.name.toLowerCase().includes('acrylic') || cat.name.toLowerCase().includes('lamp') || cat.name.toLowerCase().includes('clock') || cat.name.toLowerCase().includes('gallery') || cat.slug.includes('magnet') || cat.slug === 'photo-album';
+                                 const href = cat.slug === 'photo-album' ? '/photo-album' : (isCustom ? `/studio-v2?category=${cat.slug}` : `/shop?category=${cat.slug}`);
                                  
                                  return (
                                     <Link 
@@ -265,8 +265,8 @@ export default function Home() {
                <DragScroll className="w-full" autoScroll={true}>
                   <div className="flex gap-6 px-4 md:px-8 items-stretch w-max mx-auto md:mx-0">
                      {safeCategories.filter(c => !c.parentId && c.isActive).sort((a, b) => (a.order || 0) - (b.order || 0)).map((item: any) => {
-                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet');
-                        const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
+                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet') || item.slug === 'photo-album';
+                        const href = item.slug === 'photo-album' ? '/photo-album' : (isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`);
 
                          return (
                            <Link key={`pop-${item.id}`} href={href} className="flex flex-col items-center w-[180px] md:w-[260px] transition-all flex-shrink-0 hover:-translate-y-1 focus:outline-none snap-start">
@@ -316,8 +316,8 @@ export default function Home() {
 
                   return combined.map((item: any) => {
                      if (item._itemType === 'category') {
-                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet');
-                        const href = isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`;
+                        const isCustom = item.slug.includes('acrylic') || item.name.toLowerCase().includes('acrylic') || item.name.toLowerCase().includes('lamp') || item.name.toLowerCase().includes('clock') || item.name.toLowerCase().includes('gallery') || item.slug.includes('magnet') || item.slug === 'photo-album';
+                        const href = item.slug === 'photo-album' ? '/photo-album' : (isCustom ? `/studio-v2?category=${item.slug}` : `/shop?category=${item.slug}`);
                         return (
                            <Link key={`new-cat-${item.id}`} href={href} className="flex flex-col items-center group text-center hover:-translate-y-1 transition-all">
                               <div className="w-full aspect-square overflow-hidden mb-4 shadow-sm rounded-[16px] relative">

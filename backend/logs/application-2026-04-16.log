@@ -1,0 +1,4 @@
+{"ip":"::1","level":"info","message":"GET /api/settings","timestamp":"2026-04-16 00:01:21","userAgent":"node"}
+{"ip":"::1","level":"info","message":"GET /api/categories","timestamp":"2026-04-16 00:01:21","userAgent":"node"}
+{"ip":"::1","level":"info","message":"GET /api/settings","timestamp":"2026-04-16 00:01:21","userAgent":"node"}
+{"ip":"::1","level":"info","message":"GET /api/categories","timestamp":"2026-04-16 00:01:21","userAgent":"node"}

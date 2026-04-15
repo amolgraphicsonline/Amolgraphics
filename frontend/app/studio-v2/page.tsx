@@ -36,6 +36,16 @@ export default function StudioV2Page() {
   const frameCountParam = searchParams.get('frameCount');
   const { addToCart, cart } = useCart();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleReplacePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && focusedSlotIdx !== null) {
+      await handlePhotoUpload(focusedSlotIdx, file);
+      // Reset input so picking the same file again triggers change
+      e.target.value = '';
+    }
+  };
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
   type AlbumStep = 'selection' | 'config' | 'layout' | 'upload' | 'magic' | 'editor';
@@ -1440,7 +1450,8 @@ export default function StudioV2Page() {
                           </div>
                         </div>
 
-                        <main className="flex-1 relative flex flex-col items-center justify-center p-6 bg-[#f0f1f3] overflow-hidden">
+                        <input type="file" ref={replaceInputRef} onChange={handleReplacePhoto} className="hidden" accept="image/*" />
+                          <main className="flex-1 relative flex flex-col items-center justify-center p-6 bg-[#f0f1f3] overflow-hidden">
                           {/* Nav Arrows */}
                           <button
                             disabled={currentSpreadIndex === 0}
@@ -1465,52 +1476,101 @@ export default function StudioV2Page() {
                               <span className={currentSpreadIndex === 0 ? 'text-[#1877F2]' : ''}>{currentSpreadIndex === 0 ? 'Front cover' : `Page ${currentSpreadIndex * 2}`}</span>
                             </div>
 
-                            {/* Floating Image Toolbar (Printshoppy Style) */}
+                            {/* Professional Image Adjustment Toolbar (Mega Version) */}
                             {isEditMode && focusedSlotIdx !== null && uploadedPhotos[focusedSlotIdx] && (
-                              <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[80] animate-in slide-in-from-top-4 duration-300">
-                                <div className="bg-white/95 backdrop-blur-2xl px-6 py-3 rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.25)] border border-slate-50 flex items-center gap-6">
-                                  <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
-                                    <button onClick={() => {
-                                      const s = (uploadedPhotos[focusedSlotIdx]?.scale || 1) - 0.1;
-                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], scale: Math.max(0.1, s) } }));
-                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><ZoomOut size={18} /></button>
-                                    <span className="text-[10px] font-black w-8 text-center text-slate-900">{Math.round((uploadedPhotos[focusedSlotIdx]?.scale || 1) * 100)}%</span>
-                                    <button onClick={() => {
-                                      const s = (uploadedPhotos[focusedSlotIdx]?.scale || 1) + 0.1;
-                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], scale: Math.min(10, s) } }));
-                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><ZoomIn size={18} /></button>
+                              <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[150] animate-in slide-in-from-top-4 duration-500">
+                                <div className="bg-white/95 backdrop-blur-3xl px-8 py-4 rounded-[3rem] shadow-[0_40px_120px_rgba(0,0,0,0.3)] border border-white/50 flex items-center gap-4">
+                                  
+                                  {/* Section 1: Replace & Aspect */}
+                                  <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
+                                    <input type="file" ref={replaceInputRef} onChange={handleReplacePhoto} className="hidden" accept="image/*" />
+                                    <button 
+                                      title="Replace Image"
+                                      onClick={() => replaceInputRef.current?.click()} 
+                                      className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all hover:scale-110"
+                                    ><ImageIcon size={20} /></button>
+                                    <button 
+                                      title="Fit/Fill Toggle"
+                                      onClick={() => {
+                                        const s = (uploadedPhotos[focusedSlotIdx]?.scale || 1) > 1.2 ? 1 : 1.5;
+                                        setUploadedPhotos(prev => { 
+                                          const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                          return { ...prev, [focusedSlotIdx]: { ...cur, scale: s } };
+                                        });
+                                      }}
+                                      className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all hover:scale-110"
+                                    ><Maximize size={20} /></button>
                                   </div>
 
-                                  <div className="flex items-center gap-4 pr-6 border-r border-slate-100">
-                                    <button onClick={() => {
-                                      const r = (uploadedPhotos[focusedSlotIdx]?.rotate || 0) - 90;
-                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], rotate: r } }));
-                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><RotateCcw size={18} /></button>
-                                    <button onClick={() => {
-                                      const r = (uploadedPhotos[focusedSlotIdx]?.rotate || 0) + 90;
-                                      setUploadedPhotos(prev => ({ ...prev, [focusedSlotIdx]: { ...prev[focusedSlotIdx], rotate: r } }));
-                                    }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><RotateCw size={18} /></button>
+                                  {/* Section 2: Zoom Duo */}
+                                  <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
+                                    <button onClick={() => setUploadedPhotos(prev => { 
+                                      const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                      return { ...prev, [focusedSlotIdx]: { ...cur, scale: Math.max(0.1, (cur.scale || 1) - 0.1) } };
+                                    })} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all"><ZoomOut size={20} /></button>
+                                    <button onClick={() => setUploadedPhotos(prev => { 
+                                      const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                      return { ...prev, [focusedSlotIdx]: { ...cur, scale: Math.min(10, (cur.scale || 1) + 0.1) } };
+                                    })} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all"><ZoomIn size={20} /></button>
                                   </div>
 
-                                  <div className="flex items-center gap-4">
-                                     <button onClick={() => {
-                                       if(fileInputRef.current) fileInputRef.current.click();
-                                     }} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-blue-500 transition-colors"><ImageIcon size={18} /></button>
-                                     <button onClick={() => {
-                                       setUploadedPhotos(prev => {
-                                         const next = { ...prev };
-                                         delete next[focusedSlotIdx];
-                                         return next;
-                                       });
-                                       setFocusedSlotIdx(null);
-                                     }} className="p-2 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                  {/* Section 3: Orientation Trio */}
+                                  <div className="flex items-center gap-2 pr-4 border-r border-slate-100">
+                                    <button onClick={() => setUploadedPhotos(prev => { 
+                                      const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                      return { ...prev, [focusedSlotIdx]: { ...cur, scale: 2 } };
+                                    })} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all"><Maximize2 size={20} /></button>
+                                    <button onClick={() => setUploadedPhotos(prev => { 
+                                      const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                      return { ...prev, [focusedSlotIdx]: { ...cur, rotate: (cur.rotate || 0) - 90 } };
+                                    })} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all"><RotateCcw size={20} /></button>
+                                    <button onClick={() => setUploadedPhotos(prev => { 
+                                      const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                      return { ...prev, [focusedSlotIdx]: { ...cur, rotate: (cur.rotate || 0) + 90 } };
+                                    })} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all"><RotateCw size={20} /></button>
+                                    <button 
+                                      title="Flip Horizontal"
+                                      onClick={() => setUploadedPhotos(prev => { 
+                                        const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                        return { ...prev, [focusedSlotIdx]: { ...cur, flipX: !cur.flipX } };
+                                      })} 
+                                      className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-blue-500 transition-all"
+                                    ><ArrowRight size={20} className={uploadedPhotos[focusedSlotIdx].flipX ? 'scale-x-[-1]' : ''} /></button>
+                                  </div>
+
+                                  
+
+                                  {/* Section 5: Slider Controls */}
+                                  <div className="flex items-center gap-4 px-4 bg-slate-50/50 rounded-2xl py-2">
+                                    <span className="text-[10px] font-black w-8 text-slate-900">{Math.round((uploadedPhotos[focusedSlotIdx]?.scale || 1) * 100)}%</span>
+                                    <input 
+                                      type="range" 
+                                      min="0.5" max="5" step="0.1" 
+                                      value={uploadedPhotos[focusedSlotIdx]?.scale || 1}
+                                      onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        setUploadedPhotos(prev => {
+                                          const cur = typeof prev[focusedSlotIdx] === "string" ? { url: prev[focusedSlotIdx], scale: 1, x: 0, y: 0, rotate: 0 } : prev[focusedSlotIdx];
+                                          return { ...prev, [focusedSlotIdx]: { ...cur, scale: val } };
+                                        });
+                                      }}
+                                      className="w-24 h-1 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                  </div>
+
+                                  {/* Section 6: Action Trio */}{/* Section 6: Action Trio */}
+                                  <div className="flex items-center gap-2 pl-4">
+                                     <button 
+                                       title="Auto Adjust"
+                                       className="p-3 bg-blue-50 text-blue-600 rounded-2xl transition-all hover:bg-blue-100"
+                                     ><Sparkles size={20} /></button>
+                                     <button onClick={() => { setUploadedPhotos(prev => { const n = {...prev}; delete n[focusedSlotIdx]; return n; }); setFocusedSlotIdx(null); }} className="p-3 hover:bg-red-50 rounded-2xl text-slate-400 hover:text-red-500 transition-all"><Trash2 size={20} /></button>
                                      <button 
                                        onClick={() => { setIsEditMode(false); setFocusedSlotIdx(null); }}
-                                       className="ml-4 px-6 py-2 bg-slate-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-                                     >
-                                       Apply
-                                     </button>
+                                       className="ml-4 px-8 py-3 bg-slate-900 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all hover:shadow-xl active:scale-95"
+                                     >Apply</button>
                                   </div>
+
                                 </div>
                               </div>
                             )}
@@ -1521,52 +1581,61 @@ export default function StudioV2Page() {
                               </div>
                             )}
 
-                            <div className="w-full h-full bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.15)] rounded-sm flex relative border border-slate-200/60 overflow-hidden group/spread hover:shadow-[0_60px_150px_-30px_rgba(0,0,0,0.2)] transition-all duration-700">
-                              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-4 bg-gradient-to-r from-black/[0.03] via-black/[0.1] to-black/[0.03] z-10" />
+                            <div className="w-full h-full bg-[#fafafa] shadow-[0_50px_150px_-30px_rgba(0,0,0,0.3)] rounded-sm flex relative border border-slate-200/60 overflow-hidden group/spread hover:shadow-[0_80px_200px_-30px_rgba(0,0,0,0.4)] transition-all duration-700">
+                                {/* Page Thickness Effect (Stacked Pages) */}
+                                <div className="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-slate-200/50 via-slate-100/30 to-transparent z-[15]" />
+                                <div className="absolute inset-y-0 right-0 w-2 bg-gradient-to-l from-slate-200/50 via-slate-100/30 to-transparent z-[15]" />
+                                
+                                {/* Paper Texture Overlay */}
+                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-[16] bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
+
+                                {/* Realistic Spine Gutter */}
+                                <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-8 bg-gradient-to-r from-transparent via-black/[0.12] to-transparent z-[20] pointer-events-none" />
+                                <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-black/5 z-[21]" />
+                              
 
                               {/* Left Side */}
                               <div className="flex-1 border-r border-slate-100/50 p-6 relative">
                                   {currentSpreadIndex === 0 && <div className="absolute top-4 left-4 z-20 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded">Back Cover</div>}
                                 <div className="w-full h-full bg-white flex flex-col items-center justify-center group/page overflow-hidden">
                                   {currentSpreadIndex === 0 ? (
-                                    <div className="w-full h-full flex flex-col items-center justify-between py-12 px-8 select-none">
-                                      <div />
-                                      <div className="group-hover/page:scale-105 transition-all duration-700">
-                                        {globalSettings?.logo ? (
-                                          <img src={resolveMedia(globalSettings.logo, API_URL)} className="h-8 mx-auto" alt="Logo" />
-                                        ) : (
-                                          <div className="text-xl font-black italic tracking-tighter">Amol <span className="text-[#1877F2]">Graphics</span></div>
-                                        )}
+                                    <div className="w-full h-full flex flex-col items-center justify-center p-12 select-none space-y-12">
+                                      {/* Large Brand Logo */}
+                                      <div className="flex flex-col items-center gap-8 group/logo">
+                                        <div className="w-full max-w-[280px] h-32 relative flex items-center justify-center transition-transform duration-700 group-hover/logo:scale-105">
+                                          {globalSettings?.logo ? (
+                                            <img src={resolveMedia(globalSettings.logo, API_URL)} className="w-full h-full object-contain drop-shadow-2xl" alt="Brand Logo" />
+                                          ) : (
+                                            <div className="w-full h-full bg-[#1877F2] rounded-3xl flex items-center justify-center text-white font-black text-6xl italic shadow-2xl">A</div>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Brand Name */}
+                                        <div className="text-center">
+                                          <div className="text-2xl font-black italic tracking-tighter text-slate-900 drop-shadow-sm">
+                                            Amol <span className="text-[#1877F2]">Graphics</span>
+                                          </div>
+                                          <span className="text-[10px] font-black text-[#1877F2]/30 uppercase tracking-[0.6em] mt-3 block">Boutique Printing Studio</span>
+                                        </div>
                                       </div>
-                                      <div className="text-center space-y-2">
-                                        <div className="w-8 h-px bg-slate-100 mx-auto" />
-                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] max-w-[180px] leading-relaxed">
-                                          {globalSettings?.contactAddress || globalSettings?.address || 'Premium Boutique Printing'}
+
+                                      {/* Bold Blue Address */}
+                                      <div className="flex flex-col items-center text-center gap-8">
+                                        <div className="w-12 h-1 bg-[#1877F2] rounded-full shadow-sm" />
+                                        <p className="text-xl font-medium font-serif italic text-[#1877F2] tracking-tight max-w-[400px] leading-relaxed drop-shadow-sm">
+                                          {globalSettings?.contactAddress || globalSettings?.address || 'Shop No. 01, Heramb Apartment, 501/2, Opp. DSK Chintamani, Pate-Sampada, Shaniwar Peth, Pune, Maharashtra 411030'}
                                         </p>
+                                        <div className="flex items-center gap-8 mt-6">
+                                           <span className="text-[12px] font-extrabold text-slate-300 uppercase tracking-widest">Premium Quality</span>
+                                           <div className="w-2 h-2 bg-[#1877F2]/20 rounded-full" />
+                                           <span className="text-[12px] font-extrabold text-slate-300 uppercase tracking-widest">Est. 1995</span>
+                                        </div>
                                       </div>
                                     </div>
-                                  ) : uploadedPhotos[currentSpreadIndex * 2 - 1] ? (
+                                  ) : uploadedPhotos[(currentSpreadIndex - 1) * 2] ? (
                                     <Slot 
-                                      idx={currentSpreadIndex * 2 - 1}
-                                      onDoubleClick={() => { setIsEditMode(true); setFocusedSlotIdx(currentSpreadIndex * 2 - 1); }}
-                                      photos={uploadedPhotos}
-                                      isFinal={!isEditMode}
-                                      apiUrl={API_URL}
-                                      onUpload={handlePhotoUpload}
-                                      onAdjust={(idx, photo) => setUploadedPhotos(prev => ({ ...prev, [idx]: photo }))}
-                                    />
-                                  ) : <ImageIcon size={32} className="text-slate-100" />}
-                                </div>
-                              </div>
-
-                              {/* Right Side */}
-                              <div className="flex-1 p-6 relative">
-                                  {currentSpreadIndex === 0 && <div className="absolute top-4 right-4 z-20 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded">Front Cover</div>}
-                                <div className="w-full h-full bg-slate-50/50 rounded-xs flex flex-col items-center justify-center group/page overflow-hidden border border-slate-50">
-                                  {uploadedPhotos[currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2] ? (
-                                    <Slot 
-                                      idx={currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2}
-                                      onDoubleClick={() => { setIsEditMode(true); setFocusedSlotIdx(currentSpreadIndex === 0 ? 0 : currentSpreadIndex * 2); }}
+                                      idx={(currentSpreadIndex - 1) * 2}
+                                      onDoubleClick={() => { setIsEditMode(true); setFocusedSlotIdx((currentSpreadIndex - 1) * 2); }}
                                       photos={uploadedPhotos}
                                       isFinal={!isEditMode}
                                       apiUrl={API_URL}
@@ -1574,31 +1643,58 @@ export default function StudioV2Page() {
                                       onAdjust={(idx, photo) => setUploadedPhotos(prev => ({ ...prev, [idx]: photo }))}
                                     />
                                   ) : (
-                                    <div className="w-full h-full relative group/design">
-                                       {currentSpreadIndex === 0 && selectedDesign?.previewImage && (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-200 relative group/page">
+                                      <ImageIcon size={32} strokeWidth={1} />
+                                      <span className="text-[8px] font-black uppercase tracking-widest mt-2">Place Photo</span>
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button className="text-white text-[8px] uppercase font-black tracking-widest bg-white/20 backdrop-blur px-4 py-2 rounded-full border border-white/30">Select Photo</button>
+                                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
+                                          if (e.target.files?.[0]) handlePhotoUpload((currentSpreadIndex - 1) * 2, e.target.files[0]);
+                                        }} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right Side */}
+                              <div className="flex-1 p-6 relative">
+                                  {currentSpreadIndex === 0 && <div className="absolute top-4 right-4 z-20 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded">Front Cover</div>}
+                                <div className="w-full h-full bg-slate-50/50 rounded-xs flex flex-col items-center justify-center overflow-hidden border border-slate-50">
+                                  {currentSpreadIndex === 0 ? (
+                                    <div className="w-full h-full relative group/design overflow-hidden">
+                                       {selectedDesign?.previewImage && (
                                          <img src={resolveMedia(selectedDesign.previewImage, API_URL)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover/design:scale-105" alt="Design Preview" />
                                        )}
-                                       <div className={`absolute inset-0 flex flex-col items-center justify-center text-center space-y-3 p-4 ${currentSpreadIndex === 0 && selectedDesign?.previewImage ? 'bg-black/20 backdrop-blur-[2px]' : 'bg-white'}`}>
-                                         {currentSpreadIndex === 0 && selectedDesign?.previewImage ? (
-                                            <div className="space-y-1">
-                                              <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] drop-shadow-md block">Cover Design</span>
-                                              <span className="text-[8px] font-bold text-white/80 uppercase tracking-widest block">{selectedDesign.name}</span>
-                                            </div>
-                                         ) : (
-                                            <>
-                                              <ImageIcon size={32} className="text-slate-200 mx-auto opacity-30" />
-                                              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block">{currentSpreadIndex === 0 ? 'Choose Cover Photo' : 'Place Photo Here'}</span>
-                                            </>
-                                         )}
+                                       <div className="absolute inset-x-0 bottom-0 bg-white/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 border-t border-slate-100/50">
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-black text-slate-900 uppercase tracking-[0.3em] block underline decoration-blue-500/30">Cover Design</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{selectedDesign?.name || "Premium Design"}</span>
+                                          </div>
                                        </div>
-                                     </div>
+                                    </div>
+                                  ) : uploadedPhotos[(currentSpreadIndex - 1) * 2 + 1] ? (
+                                    <Slot 
+                                      idx={(currentSpreadIndex - 1) * 2 + 1}
+                                      onDoubleClick={() => { setIsEditMode(true); setFocusedSlotIdx((currentSpreadIndex - 1) * 2 + 1); }}
+                                      photos={uploadedPhotos}
+                                      isFinal={!isEditMode}
+                                      apiUrl={API_URL}
+                                      onUpload={handlePhotoUpload}
+                                      onAdjust={(idx, photo) => setUploadedPhotos(prev => ({ ...prev, [idx]: photo }))}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-200 relative group/page">
+                                      <ImageIcon size={32} strokeWidth={1} />
+                                      <span className="text-[8px] font-black uppercase tracking-widest mt-2">Place Photo</span>
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button className="text-white text-[8px] uppercase font-black tracking-widest bg-white/20 backdrop-blur px-4 py-2 rounded-full border border-white/30">Select Photo</button>
+                                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
+                                          if (e.target.files?.[0]) handlePhotoUpload((currentSpreadIndex - 1) * 2 + 1, e.target.files[0]);
+                                        }} />
+                                      </div>
+                                    </div>
                                   )}
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center justify-center">
-                                    <button className="text-white text-[8px] uppercase font-black tracking-widest bg-white/20 backdrop-blur px-4 py-2 rounded-full border border-white/30">Select Photo</button>
-                                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
-                                      if (e.target.files?.[0]) handlePhotoUpload((currentSpreadIndex - 1) * 2 + 1, e.target.files[0]);
-                                    }} />
-                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1631,10 +1727,10 @@ export default function StudioV2Page() {
                                     ${currentSpreadIndex === idx ? 'border-[#1877F2] scale-105 shadow-md' : 'border-white hover:border-slate-200'}`}
                                   >
                                     <div className="flex-1 bg-slate-100 border-r border-white/50 overflow-hidden relative">
-                                      {idx === 0 ? <div className="absolute inset-0 bg-slate-200 flex items-center justify-center"><Book size={12} className="text-slate-400 opacity-30" /></div> : uploadedPhotos[idx * 2 - 1] && <img src={resolveMedia(uploadedPhotos[idx * 2 - 1].url, API_URL)} className="w-full h-full object-cover" />}
+                                      {idx === 0 ? <div className="absolute inset-0 bg-slate-200 flex items-center justify-center"><Book size={12} className="text-slate-400 opacity-30" /></div> : uploadedPhotos[(idx - 1) * 2] && <img src={resolveMedia(uploadedPhotos[(idx - 1) * 2].url, API_URL)} className="w-full h-full object-cover" />}
                                     </div>
                                     <div className="flex-1 bg-slate-100 overflow-hidden relative">
-                                      {uploadedPhotos[idx === 0 ? 0 : idx * 2] && <img src={resolveMedia(uploadedPhotos[idx === 0 ? 0 : idx * 2].url, API_URL)} className="w-full h-full object-cover" />}
+                                      {idx === 0 ? (selectedDesign && <img src={resolveMedia(selectedDesign.previewImage, API_URL)} className="w-full h-full object-cover" />) : (uploadedPhotos[(idx - 1) * 2 + 1] && <img src={resolveMedia(uploadedPhotos[(idx - 1) * 2 + 1].url, API_URL)} className="w-full h-full object-cover" />)}
                                     </div>
                                   </button>
                                   <span className={`text-[7px] font-black uppercase tracking-widest mt-1.5 ${currentSpreadIndex === idx ? 'text-[#1877F2]' : 'text-slate-300'}`}>{idx === 0 ? 'Cover' : `${idx * 2 - 1}-${idx * 2}`}</span>

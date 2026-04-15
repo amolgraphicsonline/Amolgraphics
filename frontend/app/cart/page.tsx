@@ -105,31 +105,40 @@ export default function CartPage() {
                               </div>
                            </div>
 
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 border-t border-slate-50 pt-6">
-                              <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
-                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SIZE :</span>
-                                 <span className="text-[11px] font-black text-[#1877F2] uppercase">{item.size || 'Default'}</span>
+                           {item.productId?.includes('album') || item.name?.includes('Photobook') ? (
+                              <div className="flex flex-col gap-1.5 border-t border-slate-50 pt-6">
+                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Size:</span> {item.size || 'A4 (12 x 9) Horizontal Book'}</p>
+                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Page Count:</span> {designData.frameCount || Object.keys(designData.photos || {}).length} pages</p>
+                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Lamination:</span> {designData.lamination || 'Photo Gloss'}</p>
+                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Paper:</span> {designData.paper || 'Premium Non Tearable'}</p>
                               </div>
-                              <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
-                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SHAPE :</span>
-                                 <span className="text-[11px] font-black text-[#1877F2] uppercase">{designData.shape || 'Square'}</span>
+                           ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 border-t border-slate-50 pt-6">
+                                 <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SIZE :</span>
+                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">{item.size || 'Default'}</span>
+                                 </div>
+                                 <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SHAPE :</span>
+                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">{designData.shape || 'Square'}</span>
+                                 </div>
+                                 <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BORDER :</span>
+                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">
+                                       {(() => {
+                                          const b = (designData.border || 'None').toUpperCase();
+                                          if (b === '#FFFFFF') return 'WHITE';
+                                          if (b === '#000000') return 'BLACK';
+                                          if (b === '#EF4444') return 'RED';
+                                          if (b === '#1877F2') return 'BLUE';
+                                          if (b === '#FFD700') return 'YELLOW';
+                                          if (b === '#1CAF9C') return 'GREEN';
+                                          return b;
+                                       })()}
+                                    </span>
+                                 </div>
                               </div>
-                              <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
-                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BORDER :</span>
-                                 <span className="text-[11px] font-black text-[#1877F2] uppercase">
-                                    {(() => {
-                                       const b = (designData.border || 'None').toUpperCase();
-                                       if (b === '#FFFFFF') return 'WHITE';
-                                       if (b === '#000000') return 'BLACK';
-                                       if (b === '#EF4444') return 'RED';
-                                       if (b === '#1877F2') return 'BLUE';
-                                       if (b === '#FFD700') return 'YELLOW';
-                                       if (b === '#1CAF9C') return 'GREEN';
-                                       return b;
-                                    })()}
-                                 </span>
-                              </div>
-                           </div>
+                           )}
                         </div>
                      </div>
 
