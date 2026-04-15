@@ -234,42 +234,49 @@ export default function PhotoAlbumLandingPage() {
       </section>
 
       {/* 5. Quality Section */}
-      <section className="py-12 md:py-16 px-6 md:px-12 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10">
-          <div className="w-full md:w-5/12">
-            <div className="aspect-[4/5] bg-slate-50 rounded-2xl overflow-hidden shadow-lg border border-slate-100 relative group">
+      <section className="py-12 md:py-20 px-6 md:px-12 bg-white">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
+          <div className="w-full md:w-4/12 flex justify-center">
+            <div className="relative w-full max-w-[340px] aspect-[3/4] bg-slate-50 rounded-3xl overflow-hidden shadow-2xl border border-slate-100 group">
               <img
-                src="https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&q=80&w=800"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
-                alt="Quality Album"
+                src="https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=800"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                alt="Quality Detail"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
-          <div className="w-full md:w-7/12 space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-[1.1] tracking-tight">
-                Experience the <br className="hidden md:block" />
+          <div className="w-full md:w-8/12 space-y-8">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
+                <ShieldCheck size={14} className="text-[#1877F2]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#1877F2]">Industrial Grade Quality</span>
+              </div>
+              <h2 className="text-3xl md:text-5xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                Experience the <br />
                 best in class quality
               </h2>
-              <p className="text-sm text-slate-500">Experience unmatched quality and physical permanence on every single page.</p>
+              <p className="text-base text-slate-500 max-w-xl leading-relaxed font-medium">
+                Our albums are crafted using the finest materials and cutting-edge printing technology to ensure your memories are preserved with museum-grade excellence.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
               <QualityItem
-                icon={<Printer className="w-5 h-5 text-blue-500" />}
+                icon={<Printer className="w-6 h-6 text-blue-500" />}
                 title="Ultra HD Print"
-                desc="Crystal clear photos with vibrant colors and sharp details."
+                desc="Crystal clear photos with vibrant colors and sharp details on premium archival paper."
               />
               <QualityItem
-                icon={<Zap className="w-5 h-5 text-amber-500" />}
+                icon={<Zap className="w-6 h-6 text-amber-500" />}
                 title="Fade Proof"
-                desc="Colors stay vibrant for years, resistant to sunlight."
+                desc="Special UV-resistant inks ensure colors stay vibrant for decades."
                 color="orange"
               />
               <QualityItem
-                icon={<Droplets className="w-5 h-5 text-teal-500" />}
+                icon={<Droplets className="w-6 h-6 text-teal-500" />}
                 title="Spill Proof"
-                desc="Water-resistant pages keep your memories safe from accidents."
+                desc="Advanced protective coating makes every page water-resistant and easy to clean."
                 color="teal"
               />
             </div>

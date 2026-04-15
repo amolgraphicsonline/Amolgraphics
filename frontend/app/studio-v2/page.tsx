@@ -144,7 +144,7 @@ export default function StudioV2Page() {
 
   useEffect(() => {
     fetch(`${API_URL}/settings`)
-      .then(res => res.ok ? res.json() : null)
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : null)
       .then(data => {
         if (!data) return;
         const s = data.data ? { id: data.data.id, ...data.data.attributes } : data;
@@ -182,7 +182,7 @@ export default function StudioV2Page() {
 
   useEffect(() => {
     fetch(`${API_URL}/categories`)
-      .then(res => res.ok ? res.json() : [])
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : [])
       .then(data => setCategories(Array.isArray(data) ? data : []))
       .catch(console.error);
   }, [API_URL]);
@@ -190,14 +190,16 @@ export default function StudioV2Page() {
   useEffect(() => {
     if (!categoryParam) return;
     fetch(`${API_URL}/categories?slug=${categoryParam}`)
-      .then(res => res.ok ? res.json() : null)
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : null)
       .then(cats => {
         const cat = Array.isArray(cats) ? cats.find((c: any) => c.slug === categoryParam) : cats;
         if (!cat) return;
         setActiveCategoryDetail(cat); // SAVE FULL CONFIG
         if (!activeProductId && cat.products?.[0]?.id) setActiveProductId(cat.products[0].id);
         else if (!activeProductId) {
-          fetch(`${API_URL}/products?category=${cat.id}`).then(res => res.json()).then(prods => {
+          fetch(`${API_URL}/products?category=${cat.id}`)
+            .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : [])
+            .then(prods => {
             if (prods.length > 0) setActiveProductId(prods[0].id);
           });
         }
@@ -222,7 +224,7 @@ export default function StudioV2Page() {
 
     // Fetch Category Banners
     fetch(`${API_URL}/banners`)
-      .then(res => res.json())
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : [])
       .then(data => {
         const blist = Array.isArray(data) ? data : [];
         const match = blist.find((b: any) =>
@@ -238,7 +240,7 @@ export default function StudioV2Page() {
   useEffect(() => {
     if (!activeProductId) return;
     fetch(`${API_URL}/products/${activeProductId}`)
-      .then(res => res.ok ? res.json() : null)
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : null)
       .then(data => {
         if (!data) return;
         // Handle Strapi-style wrapping
@@ -392,12 +394,30 @@ export default function StudioV2Page() {
         return true;
       });
 
+      // --- HARD FALLBACK FOR PHOTO ALBUMS ---
+      if (parsed.length === 0 && categoryParam === 'photo-album') {
+        parsed = [
+          { id: 'fallback-a4', label: 'A4 (12x9)', width: 12, height: 9, price: 999, thickness: 'Hardcover', mounting: 'Layflat' },
+          { id: 'fallback-a5', label: 'A5 (8x6)', width: 8, height: 6, price: 599, thickness: 'Hardcover', mounting: 'Layflat' },
+          { id: 'fallback-sq', label: 'Square (10x10)', width: 10, height: 10, price: 1299, thickness: 'Hardcover', mounting: 'Layflat' }
+        ];
+      }
+
       setSizeOptions(parsed);
-      if (!selectedSize || !parsed.find((p: any) => p.label === selectedSize.label)) {
+      if (!selectedSize || !parsed.find((p: any) => p.label === (selectedSize?.label || ''))) {
         if (parsed.length > 0) setSelectedSize(parsed[0]);
       }
+    } else if (categoryParam === 'photo-album' && sizeOptions.length === 0) {
+       // Deep Fallback: If no category data at all
+       const hardList = [
+         { id: 'hard-a4', label: 'A4 (12x9)', width: 12, height: 9, price: 999, thickness: 'Hardcover', mounting: 'Layflat' },
+         { id: 'hard-a5', label: 'A5 (8x6)', width: 8, height: 6, price: 599, thickness: 'Hardcover', mounting: 'Layflat' },
+         { id: 'hard-sq', label: 'Square (10x10)', width: 10, height: 10, price: 1299, thickness: 'Hardcover', mounting: 'Layflat' }
+       ];
+       setSizeOptions(hardList);
+       setSelectedSize(hardList[0]);
     }
-  }, [sizeOptions.length, categoryParam, selectedShape, categories]);
+  }, [sizeOptions.length, categoryParam, selectedShape, categories.length, activeCategoryDetail]);
 
   useEffect(() => {
     if (!activeProductData) return;
@@ -450,7 +470,7 @@ export default function StudioV2Page() {
     if (!categoryParam) return;
     setLoading(true);
     fetch(`${API_URL}/product-designs?category=${categoryParam}${selectedShape ? `&shape=${selectedShape}` : ''}`)
-      .then(res => res.ok ? res.json() : [])
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : [])
       .then(data => {
         const designsList = Array.isArray(data) ? data : [];
         setDesigns(designsList);
@@ -460,7 +480,7 @@ export default function StudioV2Page() {
         if (!target && designIdParam) {
           // Fallback fetch: If the design isn't cleanly matching the exact API category/shape filter locally, fetch it globally!
           fetch(`${API_URL}/product-designs/${designIdParam}`)
-            .then(rt => rt.ok ? rt.json() : null)
+            .then(rt => (rt.ok && rt.headers.get("content-type")?.includes("json")) ? rt.json() : null)
             .then(dt => {
               if (dt && dt.id) {
                 setDesigns(prev => {
@@ -498,7 +518,7 @@ export default function StudioV2Page() {
 
   useEffect(() => {
     fetch(`${API_URL}/reviews`)
-      .then(res => res.ok ? res.json() : null)
+      .then(res => (res.ok && res.headers.get("content-type")?.includes("json")) ? res.json() : null)
       .then(data => { if (data) setReviewsData(data); })
       .catch(err => console.error("Error fetching reviews:", err));
   }, [API_URL]);
@@ -642,20 +662,23 @@ export default function StudioV2Page() {
     } catch (e) { }
 
     const designData = {
+      categoryDisplayName: categoryParam === 'photo-album' ? 'Photo Album Book' : (activeCategoryDetail?.name || 'Custom Product'),
       designId: selectedDesign?.id,
+      designName: selectedDesign?.name,
+      designImage: selectedDesign?.previewImage,
       photos: uploadedPhotos,
-      frameCount: Object.keys(uploadedPhotos).length, // Represents total photos / pages for albums
+      frameCount: Object.keys(uploadedPhotos).length, 
       shape: selectedShape,
       border: borderColor,
       size: selectedSize,
-      paper: selectedPaper, // For custom photobooks
-      lamination: 'Photo Gloss', // As requested via default lamination mapping
+      paper: selectedPaper, 
+      lamination: 'Photo Gloss', 
     };
 
     addToCart({
       id: uniqueId,
       productId: finalProductId,
-      name: categoryParam.includes('gallery') ? `Acrylic Photo Print Gallery Set (${totalFrames} Frames)` : `Custom Acrylic Photo Print`,
+      name: categoryParam === 'photo-album' ? 'Photo Album Book' : (categoryParam.includes('gallery') ? `Acrylic Photo Print Gallery Set (${totalFrames} Frames)` : `Custom Acrylic Photo Print`),
       price: displayPrice,
       printingCharge: 0,
       image: Object.values(uploadedPhotos)[0]?.url || "",
@@ -711,7 +734,7 @@ export default function StudioV2Page() {
 
     return (
       <div className="bg-white min-h-screen">
-        <main className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">
+        <main className="max-w-[1536px] mx-auto px-4 md:px-8 py-10">
 
           {/* 1. HERO BANNER CONTAINER */}
           <CategoryBanner
@@ -740,8 +763,8 @@ export default function StudioV2Page() {
                     </div>
                   </div>
                   <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4 group">
-                    <div className="p-3 bg-orange-50 rounded-2xl group-hover:bg-orange-100 transition-colors">
-                      <Shapes className="text-orange-500" size={32} strokeWidth={1.5} />
+                    <div className="p-3 bg-blue-50 rounded-2xl group-hover:bg-blue-100 transition-colors">
+                      <Shapes className="text-blue-600" size={32} strokeWidth={1.5} />
                     </div>
                     <div>
                       <h3 className="text-sm font-black text-slate-900 leading-tight mb-1 uppercase tracking-tight">6 Unique Shapes</h3>
@@ -957,7 +980,7 @@ export default function StudioV2Page() {
                   <p className="text-sm font-medium text-slate-500 leading-relaxed">High-definition pigment printing that brings your memories to life with incredible vibrance and detail.</p>
                 </div>
                 <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm space-y-6 flex flex-col items-center text-center group hover:border-[#1877F2]/30 transition-all">
-                  <div className="w-20 h-20 bg-orange-50 rounded-[2rem] flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform"><Zap size={40} strokeWidth={2.5} /></div>
+                  <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform"><Zap size={40} strokeWidth={2.5} /></div>
                   <h3 className="text-xl font-black text-slate-900 uppercase italic">Strong Grip</h3>
                   <p className="text-sm font-medium text-slate-500 leading-relaxed">Integrated industrial-strength magnets ensure your photos stay securely on any magnetic surface.</p>
                 </div>
@@ -1121,7 +1144,7 @@ export default function StudioV2Page() {
 
                         <button
                           onClick={() => setAlbumStep('layout')}
-                          className="w-full h-16 bg-[#FF6B35] hover:bg-[#F25C22] text-white rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                          className="w-full h-16 bg-[#1877F2] hover:bg-[#F25C22] text-white rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                         >
                           START DESIGN <ArrowRight size={24} strokeWidth={3} />
                         </button>
@@ -1196,22 +1219,22 @@ export default function StudioV2Page() {
                           <div className="w-full max-w-md space-y-6">
                             <div className="space-y-3">
                               <input type="file" ref={fileInputRef} onChange={handleUpload} multiple accept="image/*" className="hidden" />
-                              <button onClick={() => fileInputRef.current?.click()} className="w-full h-20 bg-[#FF6B35] hover:bg-[#F25C22] text-white rounded-xl font-black uppercase tracking-widest text-xl shadow-2xl shadow-orange-500/30 active:scale-95 transition-all flex items-center justify-center gap-4">
+                              <button onClick={() => fileInputRef.current?.click()} className="w-full h-20 bg-[#1877F2] hover:bg-[#F25C22] text-white rounded-xl font-black uppercase tracking-widest text-xl shadow-2xl shadow-orange-500/30 active:scale-95 transition-all flex items-center justify-center gap-4">
                                 <Plus size={32} strokeWidth={3} /> Add Photos
                               </button>
                               <button onClick={() => { setShowMediaPicker(true); setActiveTab('images'); }} className="w-full h-14 bg-white border-2 border-slate-100 hover:border-[#1877F2] hover:text-[#1877F2] text-slate-400 rounded-xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3">
                                 <FolderHeart size={18} /> From Saved Media
                               </button>
                             </div>
-                            <div onDragOver={handleDragOver} onDrop={handleDrop} className="w-full h-40 border-2 border-dashed border-[#FF6B35]/20 rounded-2xl flex flex-col items-center justify-center bg-[#FF6B35]/5 group/drop transition-all hover:bg-[#FF6B35]/10">
-                              <CloudUpload size={36} className="text-[#FF6B35] mb-3 opacity-60" />
-                              <span className="text-xs font-black text-[#FF6B35] uppercase tracking-widest">or drag & drop them here</span>
+                            <div onDragOver={handleDragOver} onDrop={handleDrop} className="w-full h-40 border-2 border-dashed border-[#FF6B35]/20 rounded-2xl flex flex-col items-center justify-center bg-[#1877F2]/5 group/drop transition-all hover:bg-[#1877F2]/10">
+                              <CloudUpload size={36} className="text-[#1877F2] mb-3 opacity-60" />
+                              <span className="text-xs font-black text-[#1877F2] uppercase tracking-widest">or drag & drop them here</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex-1 p-16 flex flex-col items-center justify-center text-center space-y-12 bg-white">
                           <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">Manual Book</h2>
-                          <button onClick={() => setAlbumStep('editor')} className="w-full max-w-xs h-16 border-2 border-[#FF6B35]/30 text-[#FF6B35] hover:bg-orange-50 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-3">
+                          <button onClick={() => setAlbumStep('editor')} className="w-full max-w-xs h-16 border-2 border-[#FF6B35]/30 text-[#1877F2] hover:bg-blue-50 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-3">
                             Go to editor <ChevronRight size={22} strokeWidth={3} />
                           </button>
                         </div>
@@ -1265,7 +1288,7 @@ export default function StudioV2Page() {
                               <p className="font-black text-slate-900 uppercase text-xs">Let us create a proposition for you.</p>
                               <button
                                 onClick={() => setAlbumStep('magic')}
-                                className="w-full h-20 bg-[#FF6B35] hover:bg-[#F25C22] text-white rounded-xl font-black uppercase tracking-widest text-xl shadow-2xl shadow-orange-500/30 active:scale-95 transition-all flex items-center justify-center gap-4"
+                                className="w-full h-20 bg-[#1877F2] hover:bg-[#F25C22] text-white rounded-xl font-black uppercase tracking-widest text-xl shadow-2xl shadow-orange-500/30 active:scale-95 transition-all flex items-center justify-center gap-4"
                               >
                                 Do the magic <ChevronRight size={28} strokeWidth={3} />
                               </button>
@@ -1365,13 +1388,13 @@ export default function StudioV2Page() {
                               <Printer size={18} />
                               <span className="text-[7px] font-black uppercase tracking-widest">Save</span>
                             </button>
-                            <button onClick={() => setIsEditMode(!isEditMode)} className={`flex flex-col items-center gap-1 transition-all ${isEditMode ? "text-blue-500 scale-110" : "text-[#FF6B35]"}`}>
+                            <button onClick={() => setIsEditMode(!isEditMode)} className={`flex flex-col items-center gap-1 transition-all ${isEditMode ? "text-blue-500 scale-110" : "text-[#1877F2]"}`}>
                               <LucideEdit size={18} />
                               <span className="text-[7px] font-black uppercase tracking-widest">{isEditMode ? "DONE" : "Edit"}</span>
                             </button>
                             <button
                               onClick={handleAddToCart}
-                              className="h-10 px-8 bg-[#FF6B35] hover:bg-[#F25C22] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-3 ml-2"
+                              className="h-10 px-8 bg-[#1877F2] hover:bg-[#F25C22] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-3 ml-2"
                             >
                               Add To Cart <span className="font-bold opacity-80">₹999</span>
                             </button>
@@ -1440,7 +1463,61 @@ export default function StudioV2Page() {
                                 </div>
                               )}
 
-                              {(!activeTab || (activeTab !== 'images' && activeTab !== 'layouts')) && (
+                                                            {activeTab === 'theme' && (
+                                <div className="grid grid-cols-2 gap-3">
+                                  {designs.map((d, i) => (
+                                    <button 
+                                      key={i} 
+                                      onClick={() => setSelectedDesign(d)}
+                                      className={`group aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all ${selectedDesign?.id === d.id ? 'border-[#1877F2] shadow-lg' : 'border-slate-100 hover:border-blue-200'}`}
+                                    >
+                                      <div className="w-full h-full relative">
+                                        <img src={resolveMedia(d.previewImage, API_URL)} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2">
+                                          <p className="text-[7px] font-black text-white uppercase truncate">{d.name}</p>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {activeTab === 'size' && (
+                                <div className="space-y-3">
+                                  {sizeOptions.map((s, i) => (
+                                    <button 
+                                      key={i} 
+                                      onClick={() => setSelectedSize(s)}
+                                      className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${selectedSize?.label === s.label ? 'border-[#1877F2] bg-blue-50' : 'border-slate-100 hover:border-blue-100'}`}
+                                    >
+                                      <div className="flex flex-col items-start gap-1">
+                                        <span className={`text-[10px] font-black uppercase tracking-tight ${selectedSize?.label === s.label ? 'text-[#1877F2]' : 'text-slate-900'}`}>{s.label}</span>
+                                        <span className="text-[8px] font-bold text-slate-400 uppercase">Premium Paper</span>
+                                      </div>
+                                      <div className={`px-3 py-1 rounded-full text-[9px] font-black ${selectedSize?.label === s.label ? 'bg-[#1877F2] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                        ₹{s.price}
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {activeTab === 'text' && (
+                                <div className="space-y-6">
+                                  <div className="p-4 bg-slate-50 rounded-xl space-y-3">
+                                    <p className="text-[10px] font-black text-slate-900 uppercase">Quick Add</p>
+                                    <button className="w-full h-12 bg-white border border-slate-200 rounded-lg text-xs font-black uppercase text-slate-500 hover:text-[#1877F2] hover:border-[#1877F2] transition-all">Add Headline</button>
+                                    <button className="w-full h-10 bg-white border border-slate-200 rounded-lg text-[10px] font-bold uppercase text-slate-400 hover:text-[#1877F2] transition-all">Add Subtitle</button>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {['Poppins', 'Playfair', 'Inter', 'Roboto'].map(f => (
+                                      <button key={f} className="h-10 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-400 hover:bg-slate-50">{f}</button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {(!activeTab || (activeTab !== 'images' && activeTab !== 'layouts' && activeTab !== 'theme' && activeTab !== 'size' && activeTab !== 'text')) && (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-3 opacity-50 italic">
                                   <Sparkles size={32} />
                                   <p className="text-[9px] font-black uppercase tracking-widest">Content Loading...</p>
@@ -1739,10 +1816,10 @@ export default function StudioV2Page() {
 
                               {/* Add Page Placeholder */}
                               <button className="flex flex-col items-center group shrink-0">
-                                <div className="w-28 h-14 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center bg-white group-hover:border-[#FF6B35] group-hover:bg-orange-50 transition-all">
-                                  <Plus size={20} className="text-slate-200 group-hover:text-[#FF6B35]" />
+                                <div className="w-28 h-14 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center bg-white group-hover:border-[#FF6B35] group-hover:bg-blue-50 transition-all">
+                                  <Plus size={20} className="text-slate-200 group-hover:text-[#1877F2]" />
                                 </div>
-                                <span className="text-[7px] font-black text-slate-300 uppercase tracking-widest mt-1.5 group-hover:text-[#FF6B35]">Add Page</span>
+                                <span className="text-[7px] font-black text-slate-300 uppercase tracking-widest mt-1.5 group-hover:text-[#1877F2]">Add Page</span>
                               </button>
                             </div>
                           </footer>
@@ -1872,7 +1949,7 @@ export default function StudioV2Page() {
                         </div>
                         <Link
                           href={`/studio-v2?category=acrylic-photo-cutouts`}
-                          className="bg-[#FF6036] hover:bg-[#e8532f] text-white font-black py-4 px-16 rounded-xl text-base transition-all shadow-lg active:scale-95 text-center"
+                          className="bg-[#1877F2] hover:bg-[#e8532f] text-white font-black py-4 px-16 rounded-xl text-base transition-all shadow-lg active:scale-95 text-center"
                         >
                           Shop Now
                         </Link>
@@ -2102,7 +2179,7 @@ export default function StudioV2Page() {
               </div>
 
               <div className="mb-12">
-                <span className="text-lg font-bold text-orange-400">{photoStats.uploaded} of {photoStats.required} uploaded</span>
+                <span className="text-lg font-bold text-blue-500">{photoStats.uploaded} of {photoStats.required} uploaded</span>
               </div>
 
               {galleryImages.length > 0 && (
@@ -2137,9 +2214,17 @@ export default function StudioV2Page() {
   // VIEW 4: REGULAR DESIGN SELECTION
   if (shapeParam && !designIdParam && designs.length > 0) {
     const filteredDesigns = designs.filter(d => {
-      if (designFilter === 'all') return true;
-      return d.tags?.toLowerCase().includes('popular') || d.isPopular || (d.salesCount || 0) > 10;
-    });
+      const themeVal = (selectedShape || "").toLowerCase();
+      // STIRCT THEME FILTERING: If a specific theme like 'birthday' is selected, only show designs that explicitly match.
+      const themeMatch = !themeVal || themeVal === 'general' ||
+        d.name.toLowerCase().includes(themeVal) ||
+        (d.tags?.toLowerCase() || "").split(',').some(t => t.trim() === themeVal) ||
+        (d.category?.toLowerCase() || "").includes(themeVal);
+
+      if (!themeMatch) return false;
+    if (designFilter === "all") return true;
+    return d.tags?.toLowerCase().includes("popular") || d.isPopular || (d.salesCount || 0) > 10;
+  });
 
           return (
           <div className="bg-white min-h-screen">
@@ -2777,7 +2862,7 @@ export default function StudioV2Page() {
                         <span className="text-6xl font-black text-[#1caf9c] tracking-tighter">₹{totalPrice}</span>
                         <div className="flex flex-col">
                           <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full w-fit">Free Shipping</span>
-                          <span className="text-[10px] font-bold text-orange-400 mt-1 uppercase tracking-tight">★ Trusted Quality</span>
+                          <span className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-tight">★ Trusted Quality</span>
                         </div>
                       </div>
                     </header>
@@ -2854,7 +2939,7 @@ export default function StudioV2Page() {
                         <div className="bg-[#fff8ee] border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
                           <span className="text-xl">🎁</span>
                           <div>
-                            <p className="text-[11px] font-black text-slate-900 uppercase">FREE GIFT <span className="text-orange-500">WORTH ₹299</span></p>
+                            <p className="text-[11px] font-black text-slate-900 uppercase">FREE GIFT <span className="text-blue-600">WORTH ₹299</span></p>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Limited time offer!</p>
                           </div>
                         </div>

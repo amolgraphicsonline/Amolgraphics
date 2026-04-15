@@ -217,7 +217,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50 pb-20 font-sans border-t border-gray-100">
 
       {step === "success" ? (
-        <SuccessView />
+        <SuccessView customerName={formData.fullName} />
       ) : (
         <main className="max-w-[1200px] mx-auto px-4 md:px-8 py-10">
           <h1 className="text-2xl font-black text-gray-800 uppercase tracking-tighter mb-8 pb-3 border-b-2 border-red-500 inline-block">Checkout Securely</h1>
@@ -263,30 +263,34 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div 
                       onClick={() => setPaymentMethod("RAZORPAY")}
-                      className={`p-4 bg-white border-2 ${paymentMethod === "RAZORPAY" ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"} rounded flex items-center gap-4 cursor-pointer transition-colors`}
+                      className={`group p-6 bg-white border-2 ${paymentMethod === "RAZORPAY" ? "border-blue-500 bg-blue-50/50" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"} rounded-2xl flex items-center gap-5 cursor-pointer transition-all duration-300 transform active:scale-95`}
                      >
-                        <div className={`w-8 h-8 shrink-0 ${paymentMethod === "RAZORPAY" ? "bg-red-500 text-white" : "bg-gray-100 text-gray-500"} rounded flex items-center justify-center`}>
-                           <CreditCard size={16} />
+                        <div className={`w-12 h-12 shrink-0 ${paymentMethod === "RAZORPAY" ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"} rounded-xl flex items-center justify-center transition-colors shadow-sm`}>
+                           <CreditCard size={20} />
                         </div>
                         <div className="flex-1">
-                           <p className="text-sm font-bold text-gray-800 uppercase">Pay Online Form</p>
-                           <p className="text-xs text-gray-500 italic">UPI / Wallets / Cards</p>
+                           <p className={`text-[12px] font-black uppercase tracking-tight ${paymentMethod === "RAZORPAY" ? "text-blue-600" : "text-slate-800"}`}>Pay Online Now</p>
+                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">UPI / Cards / Wallets</p>
                         </div>
-                        {paymentMethod === "RAZORPAY" && <CheckCircle2 size={20} className="text-red-500" />}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === "RAZORPAY" ? "bg-blue-500 border-blue-500 text-white" : "border-slate-200 bg-white"}`}>
+                           {paymentMethod === "RAZORPAY" && <CheckCircle2 size={12} />}
+                        </div>
                      </div>
 
                      <div 
                       onClick={() => setPaymentMethod("COD")}
-                      className={`p-4 bg-white border-2 ${paymentMethod === "COD" ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"} rounded flex items-center gap-4 cursor-pointer transition-colors`}
+                      className={`group p-6 bg-white border-2 ${paymentMethod === "COD" ? "border-[#1caf9c] bg-emerald-50/50" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"} rounded-2xl flex items-center gap-5 cursor-pointer transition-all duration-300 transform active:scale-95`}
                      >
-                        <div className={`w-8 h-8 shrink-0 ${paymentMethod === "COD" ? "bg-red-500 text-white" : "bg-gray-100 text-gray-500"} rounded flex items-center justify-center`}>
-                           <Truck size={16} />
+                        <div className={`w-12 h-12 shrink-0 ${paymentMethod === "COD" ? "bg-[#1caf9c] text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"} rounded-xl flex items-center justify-center transition-colors shadow-sm`}>
+                           <Truck size={20} />
                         </div>
                         <div className="flex-1">
-                           <p className="text-sm font-bold text-gray-800 uppercase">Cash on Delivery</p>
-                           <p className="text-xs text-gray-500 italic">Pay cash at door</p>
+                           <p className={`text-[12px] font-black uppercase tracking-tight ${paymentMethod === "COD" ? "text-[#1caf9c]" : "text-slate-800"}`}>Cash on Delivery</p>
+                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Pay at your door</p>
                         </div>
-                        {paymentMethod === "COD" && <CheckCircle2 size={20} className="text-red-500" />}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === "COD" ? "bg-[#1caf9c] border-[#1caf9c] text-white" : "border-slate-200 bg-white"}`}>
+                           {paymentMethod === "COD" && <CheckCircle2 size={12} />}
+                        </div>
                      </div>
                   </div>
                </form>
@@ -297,22 +301,28 @@ export default function CheckoutPage() {
                <div className="bg-white border border-gray-200 rounded shadow-sm p-6 lg:sticky lg:top-24">
                   <h3 className="text-lg font-bold text-gray-800 uppercase border-b border-gray-100 pb-3 mb-4">Order Summary</h3>
                   <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 divide-y divide-gray-100 scrollbar-hide">
-                     {cart.map(item => (
-                       <div key={item.id} className="flex gap-4 pt-4 first:pt-0">
-                          <div className="w-16 h-16 bg-gray-50 rounded border border-gray-100 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                             {item.image ? (
-                               <img src={resolve(item.image)} className="w-full h-full object-contain" alt={item.name} />
-                             ) : (
-                               <span className="text-[8px] text-gray-400 font-bold uppercase text-center leading-tight">No<br/>Preview</span>
-                             )}
+                     {cart.map(item => {
+                        let designData: any = {};
+                        try { designData = JSON.parse(item.designJson || '{}'); } catch(e) {}
+                        const displayImg = designData.designImage || item.image;
+
+                        return (
+                          <div key={item.id} className="flex gap-4 pt-4 first:pt-0">
+                             <div className="w-16 h-16 bg-gray-50 rounded border border-gray-100 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                {displayImg ? (
+                                  <img src={resolve(displayImg)} className="w-full h-full object-contain" alt={item.name} />
+                                ) : (
+                                  <span className="text-[8px] text-gray-400 font-bold uppercase text-center leading-tight">No<br/>Preview</span>
+                                )}
+                             </div>
+                             <div className="flex-1 flex flex-col justify-center">
+                                <h4 className="text-sm font-bold text-gray-800 uppercase truncate">{item.name}</h4>
+                                <p className="text-xs text-gray-500 mb-1">Qty: {item.quantity}</p>
+                                <p className="text-sm font-bold text-red-500">₹{item.price * item.quantity}/-</p>
+                             </div>
                           </div>
-                          <div className="flex-1 flex flex-col justify-center">
-                             <h4 className="text-sm font-bold text-gray-800 uppercase truncate">{item.name}</h4>
-                             <p className="text-xs text-gray-500 mb-1">Qty: {item.quantity}</p>
-                             <p className="text-sm font-bold text-red-500">₹{item.price * item.quantity}/-</p>
-                          </div>
-                       </div>
-                     ))}
+                        );
+                      })}
                   </div>
   
                   <div className="space-y-3 pt-6 mt-4 border-t border-gray-200 text-sm">
@@ -403,27 +413,27 @@ function AdminInput({ label, isTextArea, icon, ...props }: any) {
   );
 }
 
-function SuccessView() {
+function SuccessView({ customerName }: { customerName?: string }) {
   return (
     <main className="max-w-xl mx-auto px-4 py-20 text-center space-y-6">
-       <div className="w-24 h-24 mx-auto bg-green-50 rounded-full border border-green-100 flex items-center justify-center text-green-500 mb-6 shadow-sm">
-          <CheckCircle2 size={48} />
+       <div className="w-20 h-20 mx-auto bg-emerald-50 rounded-full border border-emerald-100 flex items-center justify-center text-emerald-500 mb-4 shadow-sm">
+          <CheckCircle2 size={32} />
        </div>
        
-       <div className="space-y-2">
-          <h2 className="text-3xl font-black text-gray-800 uppercase">Order Confirmed</h2>
-          <p className="text-gray-500 font-medium text-sm">Thank you! Your custom memories are being processed.</p>
+       <div className="space-y-1">
+          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Order Confirmed</h2>
+          <p className="text-slate-500 font-medium text-[12px]">Thank You, {customerName?.split(' ')[0] || 'Friend'}! Your custom memories are being processed.</p>
        </div>
 
-       <div className="p-6 bg-white border border-gray-200 rounded shadow-sm flex justify-around mt-8">
+       <div className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm flex justify-around mt-8">
            <div className="space-y-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Order Number</p>
-              <p className="text-lg font-black text-gray-800">#{Math.floor(100000 + Math.random() * 900000)}</p>
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Order Number</p>
+              <p className="text-md font-black text-slate-800">#{Math.floor(100000 + Math.random() * 900000)}</p>
            </div>
        </div>
 
-       <div className="pt-8 text-sm font-medium text-gray-500 group">
-          <Link href="/shop" className="text-red-500 hover:text-red-600 transition-colors border-b-2 border-red-500 pb-1">
+       <div className="pt-8 text-[11px] font-black uppercase tracking-widest group">
+          <Link href="/shop" className="text-blue-500 hover:text-blue-600 transition-colors border-b-2 border-blue-500 pb-1">
              Continue Shopping
           </Link>
        </div>

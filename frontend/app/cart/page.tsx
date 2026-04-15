@@ -75,7 +75,7 @@ export default function CartPage() {
                      <div className="p-6 md:p-8 flex flex-col md:flex-row gap-10">
                         {/* PRODUCT PREVIEW - Increased padding to show canvas clearly */}
                         <div className="w-full md:w-56 aspect-square rounded-[3rem] bg-slate-100/80 border border-slate-200/50 overflow-hidden shrink-0 flex items-center justify-center relative p-8 group shadow-inner">
-                           {/* The "Acrylic" White Piece */}
+                           {/* The "Acrylic/Book" Preview Piece */}
                            <div className="absolute inset-8 bg-white shadow-2xl transition-transform duration-700 group-hover:scale-105" 
                               style={{ 
                                  clipPath: designData.shape?.toLowerCase().includes('heart') ? 'url(#heart-clip)' : (designData.shape?.toLowerCase().includes('hex') ? 'url(#hexagon-clip)' : (designData.shape?.toLowerCase().includes('circle') ? 'circle(50% at 50% 50%)' : 'none')),
@@ -83,18 +83,27 @@ export default function CartPage() {
                               }}
                            >
                               <img 
-                                 src={resolve(item.image)} 
+                                 src={resolve(designData.designImage || item.image)} 
                                  alt={item.name} 
                                  className="w-full h-full object-cover" 
                               />
+                              {(designData.designImage && item.image) && (
+                                 <div className="absolute bottom-2 right-2 w-12 h-12 rounded-lg border-2 border-white shadow-lg overflow-hidden">
+                                    <img src={resolve(item.image)} className="w-full h-full object-cover" />
+                                 </div>
+                              )}
                            </div>
                         </div>
 
                         {/* PRODUCT SPECS */}
                         <div className="flex-1 space-y-8 pt-2">
                            <div className="relative">
-                              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase leading-tight mb-1">{item.name}</h3>
-                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{item.variantName || 'Custom Acrylic Piece'}</p>
+                              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase leading-tight mb-1">
+                                 {designData.categoryDisplayName || item.name}
+                              </h3>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                                 {designData.designName || item.variantName || 'Custom Personalized Product'}
+                              </p>
                               
                               <div className="mt-3 flex items-center gap-3">
                                  <p className="text-xl font-black text-slate-900 leading-none">₹{item.price}</p>
@@ -105,23 +114,25 @@ export default function CartPage() {
                               </div>
                            </div>
 
-                           {item.productId?.includes('album') || item.name?.includes('Photobook') ? (
-                              <div className="flex flex-col gap-1.5 border-t border-slate-50 pt-6">
-                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Size:</span> {item.size || 'A4 (12 x 9) Horizontal Book'}</p>
-                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Page Count:</span> {designData.frameCount || Object.keys(designData.photos || {}).length} pages</p>
-                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Lamination:</span> {designData.lamination || 'Photo Gloss'}</p>
-                                 <p className="text-[12px] text-slate-500"><span className="font-semibold text-slate-800">Photobook Paper:</span> {designData.paper || 'Premium Non Tearable'}</p>
-                              </div>
-                           ) : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 border-t border-slate-50 pt-6">
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 border-t border-slate-50 pt-6">
+                              {/* 1. SIZE (Always show if exists) */}
+                              {(item.size || designData.size?.label) && (
                                  <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SIZE :</span>
-                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">{item.size || 'Default'}</span>
+                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">{item.size || designData.size?.label}</span>
                                  </div>
+                              )}
+
+                              {/* 2. THEME / SHAPE */}
+                              {(designData.shape || item.variantName) && (
                                  <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SHAPE :</span>
-                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">{designData.shape || 'Square'}</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">THEME :</span>
+                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">{designData.shape || item.variantName}</span>
                                  </div>
+                              )}
+
+                              {/* 3. BORDER (Show only if not none) */}
+                              {designData.border && designData.border !== 'none' && (
                                  <div className="flex justify-between items-center bg-slate-50/50 px-4 py-2 rounded-xl">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BORDER :</span>
                                     <span className="text-[11px] font-black text-[#1877F2] uppercase">
@@ -137,6 +148,24 @@ export default function CartPage() {
                                        })()}
                                     </span>
                                  </div>
+                               )}
+
+                                {/* 4. PAGES / IMAGES */}
+                                {(designData.frameCount || Object.keys(designData.photos || {}).length > 0) && (
+                                 <div className="flex justify-between items-center bg-[#f0f9ff] px-4 py-2 rounded-xl border border-blue-100">
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">CONTENT :</span>
+                                    <span className="text-[11px] font-black text-[#1877F2] uppercase">
+                                      {designData.frameCount || Object.keys(designData.photos || {}).length} IMAGES
+                                    </span>
+                                 </div>
+                               )}
+                           </div>
+
+                           {/* 5. DESIGN IDENTIFIER */}
+                           {designData.designId && (
+                              <div className="mt-4 flex items-center gap-3 bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100 italic">
+                                 <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">DESIGN ID:</span>
+                                 <span className="text-[10px] font-bold text-slate-500">{designData.designId} - {designData.designName || 'Selected Layout'}</span>
                               </div>
                            )}
                         </div>

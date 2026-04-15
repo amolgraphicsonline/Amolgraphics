@@ -29,6 +29,9 @@ export const CategoryBanner = ({
       setError(false);
       try {
         const res = await fetch(`${API_URL}/banners/all`, { cache: 'no-store' });
+        if (!res.ok || !res.headers.get("content-type")?.includes("application/json")) {
+           throw new Error("Invalid response");
+        }
         const allBanners = await res.json();
         
         if (Array.isArray(allBanners)) {
@@ -73,7 +76,7 @@ export const CategoryBanner = ({
   };
 
   return (
-    <section className="relative w-full h-[180px] md:h-[240px] bg-slate-900 rounded-2xl overflow-hidden group md:mb-10 mb-6 shadow-xl border border-slate-100">
+    <section className="relative w-full h-[200px] md:h-[320px] bg-slate-900 rounded-2xl overflow-hidden group md:mb-10 mb-6 shadow-xl border border-slate-100">
       {/* Background Image with Parallax-like effect */}
       <div className="absolute inset-0 transition-transform duration-700 md:group-hover:scale-105">
         <img
@@ -82,8 +85,8 @@ export const CategoryBanner = ({
           className="w-full h-full object-cover grayscale-0"
         />
         {/* Modern Overlay Gradients - Lightened for visibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/10 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
       </div>
 
       {/* Content */}
@@ -91,20 +94,20 @@ export const CategoryBanner = ({
         <div className="space-y-4 animate-in slide-in-from-left-8 duration-700">
           {/* Tagline */}
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">Premium Selection</span>
           </div>
 
           <h1 className="text-3xl md:text-5xl font-black text-white leading-[1.1] tracking-tight">
             {banner.title.split(" ").map((word, i) => (
-              <span key={i} className={i === 1 ? "text-orange-300 block" : ""}>
+              <span key={i} className={i === 1 ? "text-blue-300 block" : ""}>
                 {word}{" "}
               </span>
             ))}
           </h1>
 
           {banner.subtitle && (
-            <p className="text-lg md:text-xl text-white/50 font-medium max-w-xl leading-relaxed">
+            <p className="text-lg md:text-xl text-white/70 font-medium max-w-xl leading-relaxed">
               {banner.subtitle}
             </p>
           )}
