@@ -1464,7 +1464,7 @@ export default function StudioV2Page() {
                                   {currentSpreadIndex === 0 ? (
                                     <div className="w-full h-full flex flex-col items-center justify-between py-12 px-8 select-none">
                                       <div />
-                                      <div className="opacity-40 grayscale group-hover/page:grayscale-0 group-hover/page:opacity-80 transition-all duration-700 transform group-hover/page:scale-105">
+                                      <div className="group-hover/page:scale-105 transition-all duration-700">
                                         {globalSettings?.logo ? (
                                           <img src={resolveMedia(globalSettings.logo, API_URL)} className="h-8 mx-auto" alt="Logo" />
                                         ) : (
@@ -1490,10 +1490,24 @@ export default function StudioV2Page() {
                                   {uploadedPhotos[currentSpreadIndex * 2 + 1] ? (
                                     <img src={resolveMedia(uploadedPhotos[currentSpreadIndex * 2 + 1].url, API_URL)} className="w-full h-full object-cover transition-transform duration-700 group-hover/page:scale-105" />
                                   ) : (
-                                    <div className="text-center space-y-3">
-                                      <ImageIcon size={32} className="text-slate-100 mx-auto opacity-30" />
-                                      {currentSpreadIndex === 0 && <span className="text-[7px] font-black text-slate-300 uppercase tracking-[0.3em] block">Place Cover Image</span>}
-                                    </div>
+                                    <div className="w-full h-full relative group/design">
+                                       {currentSpreadIndex === 0 && selectedDesign?.previewImage && (
+                                         <img src={resolveMedia(selectedDesign.previewImage, API_URL)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover/design:scale-105" alt="Design Preview" />
+                                       )}
+                                       <div className={`absolute inset-0 flex flex-col items-center justify-center text-center space-y-3 p-4 ${currentSpreadIndex === 0 && selectedDesign?.previewImage ? 'bg-black/20 backdrop-blur-[2px]' : 'bg-white'}`}>
+                                         {currentSpreadIndex === 0 && selectedDesign?.previewImage ? (
+                                            <div className="space-y-1">
+                                              <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] drop-shadow-md block">Cover Design</span>
+                                              <span className="text-[8px] font-bold text-white/80 uppercase tracking-widest block">{selectedDesign.name}</span>
+                                            </div>
+                                         ) : (
+                                            <>
+                                              <ImageIcon size={32} className="text-slate-200 mx-auto opacity-30" />
+                                              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block">{currentSpreadIndex === 0 ? 'Choose Cover Photo' : 'Place Photo Here'}</span>
+                                            </>
+                                         )}
+                                       </div>
+                                     </div>
                                   )}
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center justify-center">
                                     <button className="text-white text-[8px] uppercase font-black tracking-widest bg-white/20 backdrop-blur px-4 py-2 rounded-full border border-white/30">Select Photo</button>
